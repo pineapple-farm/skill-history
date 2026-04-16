@@ -1,5 +1,3 @@
-export const MIN_SNAPSHOTS_FOR_CHART = 7;
-
 export type Snapshot = {
   captured_at: string;
   downloads: number;
@@ -46,17 +44,12 @@ function attributionText(): string {
   return `<text x="${W - 8}" y="${H - 8}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${ATTRIBUTION}</text>`;
 }
 
-export function renderGateSvg(skill: SkillMeta, daysTracked: number): string {
-  const daysLine =
-    daysTracked === 0
-      ? "Tracking starts soon"
-      : `${daysTracked} day${daysTracked === 1 ? "" : "s"} of data (need ${MIN_SNAPSHOTS_FOR_CHART})`;
+export function renderEmptySvg(skill: SkillMeta): string {
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
   return `${svgOpen()}
   <rect width="100%" height="100%" fill="white"/>
-  <text x="${W / 2}" y="${H / 2 - 12}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${title}</text>
-  <text x="${W / 2}" y="${H / 2 + 12}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">${daysLine}</text>
-  <text x="${W / 2}" y="${H / 2 + 32}" text-anchor="middle" font-size="10" fill="${MUTED_COLOR}">chart appears once we have ${MIN_SNAPSHOTS_FOR_CHART}+ daily snapshots</text>
+  <text x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${title}</text>
+  <text x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">tracking starts on next sweep</text>
   ${attributionText()}
 </svg>`;
 }
@@ -129,15 +122,14 @@ export function renderChartPageHtml(
   const embedMarkdown = `[![Download history](${svgUrl})](${pageUrl})`;
   const embedEscaped = escapeXml(embedMarkdown);
   const latest = snapshots.at(-1);
-  const gated = snapshots.length < MIN_SNAPSHOTS_FOR_CHART;
   const delta = computeDeltas(snapshots);
 
   const headline = latest
     ? `${latest.downloads.toLocaleString()} downloads`
     : "No snapshots yet";
-  const subline = gated
-    ? `Tracking ${skill.handle}/${skill.slug} since ${snapshots[0]?.captured_at ?? "today"} — chart appears after ${MIN_SNAPSHOTS_FOR_CHART} daily snapshots (${snapshots.length}/${MIN_SNAPSHOTS_FOR_CHART} so far).`
-    : `${delta.d7 >= 0 ? "+" : ""}${delta.d7.toLocaleString()} last 7d · ${delta.d30 >= 0 ? "+" : ""}${delta.d30.toLocaleString()} last 30d`;
+  const subline = latest
+    ? `${delta.d7 >= 0 ? "+" : ""}${delta.d7.toLocaleString()} last 7d · ${delta.d30 >= 0 ? "+" : ""}${delta.d30.toLocaleString()} last 30d · tracking since ${snapshots[0].captured_at}`
+    : `Tracking starts on next sweep.`;
 
   return `<!DOCTYPE html>
 <html lang="en">

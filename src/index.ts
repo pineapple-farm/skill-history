@@ -1,10 +1,9 @@
 import { Hono } from "hono";
 import { runSweep } from "./sweep";
 import {
-  MIN_SNAPSHOTS_FOR_CHART,
   renderChartPageHtml,
   renderChartSvg,
-  renderGateSvg,
+  renderEmptySvg,
   renderNotFoundSvg,
   type Snapshot,
   type SkillMeta,
@@ -97,8 +96,8 @@ app.get("/chart/:handle/:slugSvg", async (c) => {
   }
   const { skill, snapshots } = data;
   const body =
-    snapshots.length < MIN_SNAPSHOTS_FOR_CHART
-      ? renderGateSvg(skill, snapshots.length)
+    snapshots.length === 0
+      ? renderEmptySvg(skill)
       : renderChartSvg(skill, snapshots);
   return new Response(body, { status: 200, headers: SVG_HEADERS });
 });
