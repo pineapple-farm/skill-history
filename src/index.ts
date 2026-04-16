@@ -3,6 +3,7 @@ import { runSweep } from "./sweep";
 
 type Env = {
   DB: D1Database;
+  ADMIN_SECRET?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -17,14 +18,27 @@ app.get("/healthz", async (c) => {
 });
 
 app.post("/admin/sweep", async (c) => {
-  const result = await runSweep(c.env.DB);
-  return c.json(result);
+  const secret = c.env.ADMIN_SECRET;
+  if (!secret || c.req.header("x-admin-secret") !== secret) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  c.executionCtx.waitUntil(
+    (async () => {
+      try {
+        const result = await runSweep(c.env.DB);
+        console.log("admin sweep complete", result);
+      } catch (err) {
+        console.error("admin sweep failed", err);
+      }
+    })(),
+  );
+  return c.json({ status: "started" }, 202);
 });
 
 export default {
   fetch: app.fetch,
 
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(
       (async () => {
         const result = await runSweep(env.DB);
