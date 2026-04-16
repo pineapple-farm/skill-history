@@ -45,6 +45,28 @@ app.get("/healthz", async (c) => {
   return c.json({ status: "ok", today, ...counts, sweep });
 });
 
+app.get("/:handle/:slug", async (c) => {
+  const { handle, slug } = c.req.param();
+  const skill = await c.env.DB.prepare(
+    "SELECT id, handle, slug, display_name FROM skills WHERE handle = ? AND slug = ?",
+  )
+    .bind(handle, slug)
+    .first<{ id: number; handle: string; slug: string; display_name: string }>();
+  if (!skill) {
+    return c.json({ error: "skill not tracked", handle, slug }, 404);
+  }
+  const snapshots = await c.env.DB.prepare(
+    "SELECT captured_at, downloads, installs_all_time FROM snapshots WHERE skill_id = ? ORDER BY captured_at ASC",
+  )
+    .bind(skill.id)
+    .all<{
+      captured_at: string;
+      downloads: number;
+      installs_all_time: number;
+    }>();
+  return c.json({ skill, snapshots: snapshots.results ?? [] });
+});
+
 app.post("/admin/sweep", async (c) => {
   const secret = c.env.ADMIN_SECRET;
   if (!secret || c.req.header("x-admin-secret") !== secret) {
