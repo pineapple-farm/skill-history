@@ -11,10 +11,38 @@ const app = new Hono<{ Bindings: Env }>();
 app.get("/", (c) => c.text("skill-history.com — Pineapple AI"));
 
 app.get("/healthz", async (c) => {
-  const row = await c.env.DB.prepare(
-    "SELECT COUNT(*) AS skills, (SELECT COUNT(*) FROM snapshots) AS snapshots FROM skills",
-  ).first<{ skills: number; snapshots: number }>();
-  return c.json({ status: "ok", ...row });
+  const today = new Date().toISOString().slice(0, 10);
+  const [counts, state] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM skills) AS skills,
+         (SELECT COUNT(*) FROM snapshots) AS snapshots,
+         (SELECT COUNT(*) FROM snapshots WHERE captured_at = ?) AS snapshots_today`,
+    )
+      .bind(today)
+      .first<{ skills: number; snapshots: number; snapshots_today: number }>(),
+    c.env.DB.prepare(
+      "SELECT cursor, captured_at, pages_done, updated_at FROM sweep_state WHERE id = 1",
+    ).first<{
+      cursor: string | null;
+      captured_at: string | null;
+      pages_done: number;
+      updated_at: number;
+    }>(),
+  ]);
+  const sweep =
+    state && state.captured_at === today
+      ? {
+          captured_at: state.captured_at,
+          pages_done_today: state.pages_done,
+          complete_for_today: state.cursor === null && state.pages_done > 0,
+          cursor_in_progress: !!state.cursor,
+          updated_at_utc: state.updated_at
+            ? new Date(state.updated_at).toISOString()
+            : null,
+        }
+      : { captured_at: today, pages_done_today: 0, complete_for_today: false };
+  return c.json({ status: "ok", today, ...counts, sweep });
 });
 
 app.post("/admin/sweep", async (c) => {
@@ -22,28 +50,15 @@ app.post("/admin/sweep", async (c) => {
   if (!secret || c.req.header("x-admin-secret") !== secret) {
     return c.json({ error: "unauthorized" }, 401);
   }
-  c.executionCtx.waitUntil(
-    (async () => {
-      try {
-        const result = await runSweep(c.env.DB);
-        console.log("admin sweep complete", result);
-      } catch (err) {
-        console.error("admin sweep failed", err);
-      }
-    })(),
-  );
-  return c.json({ status: "started" }, 202);
+  const result = await runSweep(c.env.DB);
+  return c.json(result);
 });
 
 export default {
   fetch: app.fetch,
 
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(
-      (async () => {
-        const result = await runSweep(env.DB);
-        console.log("sweep complete", result);
-      })(),
-    );
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    const result = await runSweep(env.DB);
+    console.log("sweep complete", result);
   },
 } satisfies ExportedHandler<Env>;
