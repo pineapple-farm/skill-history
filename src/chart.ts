@@ -75,7 +75,11 @@ export function renderChartSvg(
     PAD.left + (n === 1 ? CHART_W / 2 : (i / (n - 1)) * CHART_W);
   const yAt = (v: number) => PAD.top + CHART_H - (v / niceMax) * CHART_H;
 
-  const points = snapshots.map((s, i) => `${xAt(i).toFixed(1)},${yAt(s.downloads).toFixed(1)}`).join(" ");
+  const coords = snapshots.map((s, i) => ({
+    x: xAt(i),
+    y: yAt(s.downloads),
+  }));
+  const points = coords.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const firstDate = snapshots[0].captured_at;
   const lastDate = snapshots[n - 1].captured_at;
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
@@ -89,12 +93,25 @@ export function renderChartSvg(
     })
     .join("");
 
+  const polyline =
+    n >= 2
+      ? `<polyline points="${points}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+      : "";
+  const dotRadius = n === 1 ? 4 : 2.5;
+  const dots = coords
+    .map(
+      (p) =>
+        `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${dotRadius}" fill="${LINE_COLOR}"/>`,
+    )
+    .join("");
+
   return `${svgOpen()}
   <rect width="100%" height="100%" fill="white"/>
   <text x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
   <text x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} downloads</text>
   ${gridLines}
-  <polyline points="${points}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  ${polyline}
+  ${dots}
   <text x="${PAD.left}" y="${H - 16}" font-size="10" fill="${MUTED_COLOR}">${firstDate}</text>
   <text x="${W - PAD.right}" y="${H - 16}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${lastDate}</text>
   ${attributionText()}
