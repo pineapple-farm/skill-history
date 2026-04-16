@@ -1,0 +1,24 @@
+{
+  "name": "skill-history",
+  "version": "0.0.1",
+  "description": "Track and visualize agent skill download history. Star-history for ClawHub.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply skill-history --local",
+    "db:migrate:remote": "wrangler d1 migrations apply skill-history --remote",
+    "sweep:local": "wrangler dev --test-scheduled",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.7.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250410.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.83.0"
+  }
+}

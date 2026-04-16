@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skill-history",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-15",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skill-history",
+      "database_id": "b57433fa-6476-4c40-9e62-621bb52b77ba",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
