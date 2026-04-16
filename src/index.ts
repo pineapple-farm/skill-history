@@ -1,5 +1,14 @@
 import { Hono } from "hono";
 import { runSweep } from "./sweep";
+import {
+  MIN_SNAPSHOTS_FOR_CHART,
+  renderChartPageHtml,
+  renderChartSvg,
+  renderGateSvg,
+  renderNotFoundSvg,
+  type Snapshot,
+  type SkillMeta,
+} from "./chart";
 
 type Env = {
   DB: D1Database;
@@ -45,26 +54,75 @@ app.get("/healthz", async (c) => {
   return c.json({ status: "ok", today, ...counts, sweep });
 });
 
+async function loadSkillAndSnapshots(
+  db: D1Database,
+  handle: string,
+  slug: string,
+): Promise<{ skill: SkillMeta & { id: number }; snapshots: Snapshot[] } | null> {
+  const skill = await db
+    .prepare(
+      "SELECT id, handle, slug, display_name FROM skills WHERE handle = ? AND slug = ?",
+    )
+    .bind(handle, slug)
+    .first<{ id: number; handle: string; slug: string; display_name: string | null }>();
+  if (!skill) return null;
+  const snapshots = await db
+    .prepare(
+      "SELECT captured_at, downloads, installs_all_time FROM snapshots WHERE skill_id = ? ORDER BY captured_at ASC",
+    )
+    .bind(skill.id)
+    .all<Snapshot>();
+  return { skill, snapshots: snapshots.results ?? [] };
+}
+
+const SVG_HEADERS = {
+  "Content-Type": "image/svg+xml; charset=utf-8",
+  "Cache-Control": "public, max-age=3600, s-maxage=3600",
+  "Access-Control-Allow-Origin": "*",
+};
+
+app.get("/chart/:handle/:slugSvg", async (c) => {
+  const handle = c.req.param("handle");
+  const slugSvg = c.req.param("slugSvg");
+  if (!slugSvg.endsWith(".svg")) {
+    return c.notFound();
+  }
+  const slug = slugSvg.slice(0, -4);
+  const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
+  if (!data) {
+    return new Response(renderNotFoundSvg(handle, slug), {
+      status: 404,
+      headers: SVG_HEADERS,
+    });
+  }
+  const { skill, snapshots } = data;
+  const body =
+    snapshots.length < MIN_SNAPSHOTS_FOR_CHART
+      ? renderGateSvg(skill, snapshots.length)
+      : renderChartSvg(skill, snapshots);
+  return new Response(body, { status: 200, headers: SVG_HEADERS });
+});
+
 app.get("/:handle/:slug", async (c) => {
   const { handle, slug } = c.req.param();
-  const skill = await c.env.DB.prepare(
-    "SELECT id, handle, slug, display_name FROM skills WHERE handle = ? AND slug = ?",
-  )
-    .bind(handle, slug)
-    .first<{ id: number; handle: string; slug: string; display_name: string }>();
-  if (!skill) {
-    return c.json({ error: "skill not tracked", handle, slug }, 404);
+  const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
+  const wantsJson =
+    c.req.header("accept")?.includes("application/json") ?? false;
+  if (!data) {
+    if (wantsJson) {
+      return c.json({ error: "skill not tracked", handle, slug }, 404);
+    }
+    return c.html(
+      `<!DOCTYPE html><meta charset="utf-8"><title>Not found — skill-history.com</title><body style="font-family:system-ui;max-width:640px;margin:40px auto;padding:0 16px"><h1>Skill not tracked</h1><p><code>${handle}/${slug}</code> isn't in our index. If this skill exists on ClawHub, it should appear within 6 hours.</p></body>`,
+      404,
+    );
   }
-  const snapshots = await c.env.DB.prepare(
-    "SELECT captured_at, downloads, installs_all_time FROM snapshots WHERE skill_id = ? ORDER BY captured_at ASC",
-  )
-    .bind(skill.id)
-    .all<{
-      captured_at: string;
-      downloads: number;
-      installs_all_time: number;
-    }>();
-  return c.json({ skill, snapshots: snapshots.results ?? [] });
+  if (wantsJson) {
+    return c.json({ skill: data.skill, snapshots: data.snapshots });
+  }
+  const url = new URL(c.req.url);
+  const origin = `${url.protocol}//${url.host}`;
+  return c.html(renderChartPageHtml(data.skill, data.snapshots, origin));
 });
 
 app.post("/admin/sweep", async (c) => {
