@@ -207,7 +207,7 @@ export function renderChartPageHtml(
 <h2>Embed this chart</h2>
 <pre>${embedEscaped}</pre>
 <footer>
-  Built by <a href="https://gavinpineapple.substack.com">Pineapple AI</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
 </footer>
 </body>
 </html>`;

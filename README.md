@@ -2,7 +2,7 @@
 
 Track and visualize agent skill download history from ClawHub. An embeddable chart for READMEs — star-history, but for agent skills.
 
-[skill-history.com](https://skill-history.com) · built by [Pineapple AI](https://gavinpineapple.substack.com)
+[skill-history.com](https://skill-history.com) · built by [Pineapple AI](https://pineappleai.com)
 
 ## Status
 
