@@ -25,8 +25,15 @@ app.get("/robots.txt", (c) => {
 });
 
 app.get("/sitemap.xml", async (c) => {
+  // Curated: top 500 skills by downloads only. Full 54k sitemap risks
+  // thin-content demotion since most pages have <7 days of data.
+  // Expand once charts are data-rich.
   const { results } = await c.env.DB.prepare(
-    "SELECT handle, slug FROM skills",
+    `SELECT s.handle, s.slug FROM skills s
+     JOIN snapshots sn ON sn.skill_id = s.id
+     WHERE sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+     ORDER BY sn.downloads DESC
+     LIMIT 500`,
   ).all<{ handle: string; slug: string }>();
 
   const urls = [
