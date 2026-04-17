@@ -133,18 +133,13 @@ function niceAxis(
 ): { yMin: number; yMax: number } {
   if (range === 0) {
     // All values identical — show a band around the value
-    const pad = Math.max(1, rawMin * 0.01);
+    const pad = Math.max(1, rawMin * 0.05);
     return { yMin: Math.max(0, rawMin - pad), yMax: rawMax + pad };
   }
-  // Pick a tick interval based on the range, not the absolute values
-  const tickTarget = range / 4; // ~4-5 gridlines
-  const exp = Math.floor(Math.log10(tickTarget));
-  const base = Math.pow(10, exp);
-  const m = tickTarget / base;
-  const tick = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * base;
-  const lo = Math.floor((rawMin - range * 0.1) / tick) * tick;
-  const hi = Math.ceil((rawMax + range * 0.05) / tick) * tick;
-  return { yMin: Math.max(0, lo), yMax: hi };
+  // Axis should be tight around the data: pad by 20% of the change
+  // so the line fills the chart. Works for delta=8 and delta=1615 alike.
+  const pad = range * 0.2;
+  return { yMin: Math.max(0, rawMin - pad), yMax: rawMax + pad };
 }
 
 export function renderChartPageHtml(
