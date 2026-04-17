@@ -193,11 +193,17 @@ export function renderChartPageHtml(
   pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
   footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
   footer a { color: #6b7280; }
+  .embed-section { position: relative; }
+  .embed-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+  .btn-small { font-size: 13px; padding: 4px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; line-height: 1.4; }
+  .btn-small:hover { background: #f9fafb; border-color: #9ca3af; }
   @media (prefers-color-scheme: dark) {
     body { color: #e5e7eb; background: #0f172a; }
     .meta, .subline, footer, footer a, .meta a { color: #9ca3af; }
     pre { background: #1e293b; }
     .chart { border-color: #334155; background: white; }
+    .btn-small { background: #1e293b; color: #e5e7eb; border-color: #475569; }
+    .btn-small:hover { background: #334155; border-color: #64748b; }
   }
 </style>
 </head>
@@ -212,10 +218,35 @@ export function renderChartPageHtml(
 </section>
 <div class="chart"><img src="${svgUrl}" alt="Download history for ${title}"></div>
 <h2>Embed this chart</h2>
-<pre>${embedEscaped}</pre>
+<div class="embed-section">
+  <div class="embed-actions">
+    <button id="copy-btn" class="btn-small" onclick="copyEmbed()">Copy</button>
+    <button id="readme-btn" class="btn-small" onclick="addToReadme()">Add to README</button>
+  </div>
+  <pre id="embed-code">${embedEscaped}</pre>
+</div>
 <footer>
   Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
 </footer>
+<script>
+var embedText = ${JSON.stringify(embedMarkdown)};
+var readmeUrl = "https://github.com/${skill.handle}/${skill.slug}/edit/main/README.md";
+function copyEmbed() {
+  navigator.clipboard.writeText(embedText).then(function() {
+    var btn = document.getElementById("copy-btn");
+    btn.textContent = "Copied!";
+    setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+  });
+}
+function addToReadme() {
+  navigator.clipboard.writeText(embedText).then(function() {
+    var btn = document.getElementById("readme-btn");
+    btn.textContent = "Copied!";
+    setTimeout(function() { btn.textContent = "Add to README"; }, 2000);
+    window.open(readmeUrl, "_blank");
+  });
+}
+</script>
 </body>
 </html>`;
 }
