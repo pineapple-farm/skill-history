@@ -116,7 +116,7 @@ export function renderChartSvg(
   return `${svgOpen()}
   <rect width="100%" height="100%" fill="white"/>
   <text x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
-  <text x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} downloads</text>
+  <text x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
   ${gridLines}
   ${polyline}
   ${dots}
@@ -157,7 +157,7 @@ export function renderChartPageHtml(
   const delta = computeDeltas(snapshots);
 
   const headline = latest
-    ? `${latest.downloads.toLocaleString()} downloads`
+    ? `${latest.downloads.toLocaleString()} ClawHub downloads`
     : "No snapshots yet";
   const subline = latest
     ? `${delta.d7 >= 0 ? "+" : ""}${delta.d7.toLocaleString()} last 7d · ${delta.d30 >= 0 ? "+" : ""}${delta.d30.toLocaleString()} last 30d · tracking since ${snapshots[0].captured_at}`
