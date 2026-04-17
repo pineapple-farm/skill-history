@@ -5,8 +5,10 @@ const USER_AGENT =
   "skill-history.com crawler (+https://skill-history.com; contact: gavin.lin.asd@gmail.com)";
 
 // Cloudflare free-plan caps subrequests (fetch calls) at 50 per invocation.
-// We chunk sweeps into runs of ≤40 pages and persist the cursor in sweep_state.
-const MAX_PAGES_PER_RUN = 40;
+// D1 batch calls are internal bindings, not subrequests, so only Convex
+// fetches count. 48 pages = 48 fetches, safely under 50.
+// With 0 */4 cron (6 fires/day): 6 × 48 = 288 > 280 pages = full sweep.
+const MAX_PAGES_PER_RUN = 48;
 
 type SkillRow = {
   ownerHandle: string;
