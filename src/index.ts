@@ -228,6 +228,258 @@ ${urls.join("\n")}
   });
 });
 
+app.get("/llms.txt", (c) => {
+  return c.text(`# skill-history.com
+
+> Track and visualize ClawHub agent skill download history over time.
+
+skill-history.com records daily download snapshots for all 54,000+ skills
+on ClawHub (clawhub.ai). Authors can embed a live-updating SVG chart in
+their GitHub README showing download growth over time.
+
+## Data available
+
+- Daily download counts per skill (cumulative, from ClawHub)
+- Daily installs_all_time per skill (cumulative)
+- Historical snapshots going back to 2026-04-16
+
+## API endpoints
+
+All endpoints return JSON when requested with Accept: application/json.
+
+### GET /{handle}/{slug}
+Returns skill metadata and all daily snapshots.
+Example: GET /gavinlinasd/self-preserve
+Response: { skill: { handle, slug, display_name }, snapshots: [{ captured_at, downloads, installs_all_time }] }
+
+### GET /chart/{handle}/{slug}.svg
+Returns an SVG chart image of download history.
+Embeddable in GitHub READMEs and web pages.
+Headers: image/svg+xml, CORS enabled.
+
+### GET /healthz
+System status: total skills tracked, snapshots today, sweep progress.
+
+## URL mapping
+- ClawHub: clawhub.ai/{handle}/{slug}
+- skill-history: skill-history.com/{handle}/{slug}
+- GitHub: github.com/{handle}/{slug} (when repo exists; handle = GitHub username via OAuth)
+
+## About
+Built by Pineapple AI (https://pineappleai.com)
+Source: https://github.com/pineapple-farm/skill-history`);
+});
+
+app.get("/api/openapi.json", (c) => {
+  const spec = {
+    openapi: "3.0.3",
+    info: {
+      title: "skill-history.com API",
+      description:
+        "Track and visualize ClawHub agent skill download history over time.",
+      version: "1.0.0",
+      contact: {
+        name: "Pineapple AI",
+        url: "https://pineappleai.com",
+      },
+    },
+    servers: [{ url: "https://skill-history.com" }],
+    paths: {
+      "/{handle}/{slug}": {
+        get: {
+          summary: "Get skill metadata and download snapshots",
+          description:
+            "Returns skill metadata and all daily download snapshots. Send Accept: application/json to receive JSON.",
+          parameters: [
+            {
+              name: "handle",
+              in: "path" as const,
+              required: true,
+              schema: { type: "string" },
+              description: "ClawHub user handle",
+              example: "gavinlinasd",
+            },
+            {
+              name: "slug",
+              in: "path" as const,
+              required: true,
+              schema: { type: "string" },
+              description: "Skill slug",
+              example: "self-preserve",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Skill data with snapshots",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      skill: {
+                        type: "object",
+                        properties: {
+                          id: { type: "integer" },
+                          handle: { type: "string" },
+                          slug: { type: "string" },
+                          display_name: {
+                            type: "string",
+                            nullable: true,
+                          },
+                        },
+                        required: ["id", "handle", "slug"],
+                      },
+                      snapshots: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            captured_at: {
+                              type: "string",
+                              format: "date",
+                              example: "2026-04-16",
+                            },
+                            downloads: { type: "integer" },
+                            installs_all_time: { type: "integer" },
+                          },
+                          required: [
+                            "captured_at",
+                            "downloads",
+                            "installs_all_time",
+                          ],
+                        },
+                      },
+                    },
+                    required: ["skill", "snapshots"],
+                  },
+                },
+              },
+            },
+            "404": {
+              description: "Skill not tracked",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      error: { type: "string" },
+                      handle: { type: "string" },
+                      slug: { type: "string" },
+                    },
+                    required: ["error", "handle", "slug"],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/chart/{handle}/{slug}.svg": {
+        get: {
+          summary: "Get download history chart as SVG",
+          description:
+            "Returns an SVG chart image of download history. Embeddable in GitHub READMEs and web pages.",
+          parameters: [
+            {
+              name: "handle",
+              in: "path" as const,
+              required: true,
+              schema: { type: "string" },
+              description: "ClawHub user handle",
+            },
+            {
+              name: "slug",
+              in: "path" as const,
+              required: true,
+              schema: { type: "string" },
+              description: "Skill slug (without .svg extension)",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "SVG chart image",
+              content: {
+                "image/svg+xml": {
+                  schema: { type: "string", format: "binary" },
+                },
+              },
+              headers: {
+                "Access-Control-Allow-Origin": {
+                  schema: { type: "string", example: "*" },
+                },
+              },
+            },
+            "404": {
+              description: "Skill not found (returns a not-found SVG)",
+              content: {
+                "image/svg+xml": {
+                  schema: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/healthz": {
+        get: {
+          summary: "System health and sweep status",
+          description:
+            "Returns total skills tracked, snapshots today, and sweep progress.",
+          responses: {
+            "200": {
+              description: "Health status",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      status: { type: "string", example: "ok" },
+                      today: {
+                        type: "string",
+                        format: "date",
+                        example: "2026-04-16",
+                      },
+                      skills: { type: "integer" },
+                      snapshots: { type: "integer" },
+                      snapshots_today: { type: "integer" },
+                      sweep: {
+                        type: "object",
+                        properties: {
+                          captured_at: {
+                            type: "string",
+                            format: "date",
+                          },
+                          pages_done_today: { type: "integer" },
+                          complete_for_today: { type: "boolean" },
+                          cursor_in_progress: { type: "boolean" },
+                          updated_at_utc: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                          },
+                        },
+                      },
+                    },
+                    required: [
+                      "status",
+                      "today",
+                      "skills",
+                      "snapshots",
+                      "snapshots_today",
+                      "sweep",
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+  return c.json(spec);
+});
+
 app.get("/healthz", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const [counts, state] = await Promise.all([
