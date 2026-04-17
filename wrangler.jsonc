@@ -11,6 +11,10 @@
       "migrations_dir": "migrations"
     }
   ],
+  "routes": [
+    { "pattern": "skill-history.com/*", "custom_domain": true },
+    { "pattern": "www.skill-history.com/*", "custom_domain": true }
+  ],
   "triggers": {
     "crons": ["0 */4 * * *"]
   },
