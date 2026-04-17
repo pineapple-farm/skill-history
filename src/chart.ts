@@ -1,3 +1,5 @@
+import { line, curveMonotoneX, area } from "d3-shape";
+
 export type Snapshot = {
   captured_at: string;
   downloads: number;
@@ -101,9 +103,28 @@ export function renderChartSvg(
     })
     .join("");
 
-  const polyline =
+  // d3-shape: smooth monotone curve (same algorithm star-history uses)
+  const curvePath =
     n >= 2
-      ? `<polyline points="${points}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+      ? (line<{ x: number; y: number }>()
+          .x((d) => d.x)
+          .y((d) => d.y)
+          .curve(curveMonotoneX)(coords) ?? "")
+      : "";
+
+  // Gradient fill under the curve
+  const areaPath =
+    n >= 2
+      ? (area<{ x: number; y: number }>()
+          .x((d) => d.x)
+          .y0(PAD.top + CHART_H)
+          .y1((d) => d.y)
+          .curve(curveMonotoneX)(coords) ?? "")
+      : "";
+
+  const smoothLine =
+    n >= 2
+      ? `<path d="${areaPath}" fill="url(#grad)" /><path d="${curvePath}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
       : "";
   const dotRadius = n === 1 ? 4 : 2.5;
   const dots = coords
@@ -113,12 +134,15 @@ export function renderChartSvg(
     )
     .join("");
 
+  const gradient = `<defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${LINE_COLOR}" stop-opacity="0.15"/><stop offset="100%" stop-color="${LINE_COLOR}" stop-opacity="0.01"/></linearGradient></defs>`;
+
   return `${svgOpen()}
+  ${gradient}
   <rect width="100%" height="100%" fill="white"/>
   <text x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
   <text x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
   ${gridLines}
-  ${polyline}
+  ${smoothLine}
   ${dots}
   <text x="${PAD.left}" y="${H - 16}" font-size="10" fill="${MUTED_COLOR}">${firstDate}</text>
   <text x="${W - PAD.right}" y="${H - 16}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${lastDate}</text>
