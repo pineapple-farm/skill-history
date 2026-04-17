@@ -170,6 +170,13 @@ export function renderChartPageHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} — skill-history.com</title>
 <meta name="description" content="Download history for ClawHub skill ${skill.handle}/${skill.slug}">
+<link rel="canonical" href="https://skill-history.com/${skill.handle}/${skill.slug}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${title} — skill-history.com">
+<meta property="og:description" content="Download history for ${skill.handle}/${skill.slug} on ClawHub">
+<meta property="og:url" content="https://skill-history.com/${skill.handle}/${skill.slug}">
+<meta property="og:image" content="https://skill-history.com/chart/${skill.handle}/${skill.slug}.svg">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111827; line-height: 1.5; }

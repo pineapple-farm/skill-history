@@ -18,6 +18,38 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", (c) => c.text("skill-history.com — Pineapple AI"));
 
+app.get("/robots.txt", (c) => {
+  return c.text(
+    `User-agent: *\nAllow: /\nSitemap: https://skill-history.com/sitemap.xml`,
+  );
+});
+
+app.get("/sitemap.xml", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    "SELECT handle, slug FROM skills",
+  ).all<{ handle: string; slug: string }>();
+
+  const urls = [
+    `  <url><loc>https://skill-history.com/</loc></url>`,
+    ...results.map(
+      (r) =>
+        `  <url><loc>https://skill-history.com/${r.handle}/${r.slug}</loc></url>`,
+    ),
+  ];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join("\n")}
+</urlset>`;
+
+  return new Response(xml, {
+    headers: {
+      "Content-Type": "application/xml",
+      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+    },
+  });
+});
+
 app.get("/healthz", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const [counts, state] = await Promise.all([
