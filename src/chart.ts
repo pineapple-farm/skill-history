@@ -72,11 +72,11 @@ export function renderChartSvg(
   const rawMin = Math.min(...downloads);
   const rawMax = Math.max(...downloads);
 
-  // Scale y-axis to min..max range so variation is visible.
-  // Add 10% padding below min so the lowest point isn't on the axis.
+  // Scale y-axis to show variation. Compute nice bounds based on the
+  // data range (not absolute values) so a 390k→392k spread doesn't
+  // get rounded to 300k–500k.
   const range = rawMax - rawMin;
-  const yMin = range === 0 ? Math.max(0, rawMin - 1) : niceFloor(rawMin - range * 0.1);
-  const yMax = range === 0 ? rawMin + 1 : niceCeil(rawMax + range * 0.05);
+  const { yMin, yMax } = niceAxis(rawMin, rawMax, range);
 
   const xAt = (i: number) =>
     PAD.left + (n === 1 ? CHART_W / 2 : (i / (n - 1)) * CHART_W);
@@ -126,20 +126,25 @@ export function renderChartSvg(
 </svg>`;
 }
 
-function niceCeil(n: number): number {
-  if (n <= 10) return 10;
-  const exp = Math.floor(Math.log10(n));
+function niceAxis(
+  rawMin: number,
+  rawMax: number,
+  range: number,
+): { yMin: number; yMax: number } {
+  if (range === 0) {
+    // All values identical — show a band around the value
+    const pad = Math.max(1, rawMin * 0.01);
+    return { yMin: Math.max(0, rawMin - pad), yMax: rawMax + pad };
+  }
+  // Pick a tick interval based on the range, not the absolute values
+  const tickTarget = range / 4; // ~4-5 gridlines
+  const exp = Math.floor(Math.log10(tickTarget));
   const base = Math.pow(10, exp);
-  const m = n / base;
-  const step = m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10;
-  return step * base;
-}
-
-function niceFloor(n: number): number {
-  if (n <= 0) return 0;
-  const exp = Math.floor(Math.log10(n));
-  const base = Math.pow(10, exp);
-  return Math.floor(n / base) * base;
+  const m = tickTarget / base;
+  const tick = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * base;
+  const lo = Math.floor((rawMin - range * 0.1) / tick) * tick;
+  const hi = Math.ceil((rawMax + range * 0.05) / tick) * tick;
+  return { yMin: Math.max(0, lo), yMax: hi };
 }
 
 export function renderChartPageHtml(
