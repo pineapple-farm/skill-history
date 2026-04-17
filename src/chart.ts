@@ -245,29 +245,20 @@ export function renderChartPageHtml(
 <div class="embed-section">
   <div class="embed-actions">
     <button id="copy-btn" class="btn-small" onclick="copyEmbed()">Copy</button>
-    <button id="readme-btn" class="btn-small" onclick="addToReadme()">Add to README</button>
   </div>
   <pre id="embed-code">${embedEscaped}</pre>
+  <p style="color:#6b7280;font-size:13px;margin-top:8px;">Paste this into your README to show a live download chart.</p>
 </div>
 <footer>
   Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
 </footer>
 <script>
 var embedText = ${JSON.stringify(embedMarkdown)};
-var readmeUrl = "https://github.com/${skill.handle}/${skill.slug}/edit/main/README.md";
 function copyEmbed() {
   navigator.clipboard.writeText(embedText).then(function() {
     var btn = document.getElementById("copy-btn");
     btn.textContent = "Copied!";
     setTimeout(function() { btn.textContent = "Copy"; }, 2000);
-  });
-}
-function addToReadme() {
-  navigator.clipboard.writeText(embedText).then(function() {
-    var btn = document.getElementById("readme-btn");
-    btn.textContent = "Copied!";
-    setTimeout(function() { btn.textContent = "Add to README"; }, 2000);
-    window.open(readmeUrl, "_blank");
   });
 }
 </script>
