@@ -68,12 +68,20 @@ export function renderChartSvg(
   snapshots: Snapshot[],
 ): string {
   const n = snapshots.length;
-  const maxY = Math.max(1, ...snapshots.map((s) => s.downloads));
-  const niceMax = niceCeil(maxY);
+  const downloads = snapshots.map((s) => s.downloads);
+  const rawMin = Math.min(...downloads);
+  const rawMax = Math.max(...downloads);
+
+  // Scale y-axis to min..max range so variation is visible.
+  // Add 10% padding below min so the lowest point isn't on the axis.
+  const range = rawMax - rawMin;
+  const yMin = range === 0 ? Math.max(0, rawMin - 1) : niceFloor(rawMin - range * 0.1);
+  const yMax = range === 0 ? rawMin + 1 : niceCeil(rawMax + range * 0.05);
 
   const xAt = (i: number) =>
     PAD.left + (n === 1 ? CHART_W / 2 : (i / (n - 1)) * CHART_W);
-  const yAt = (v: number) => PAD.top + CHART_H - (v / niceMax) * CHART_H;
+  const yAt = (v: number) =>
+    PAD.top + CHART_H - ((v - yMin) / (yMax - yMin)) * CHART_H;
 
   const coords = snapshots.map((s, i) => ({
     x: xAt(i),
@@ -88,7 +96,7 @@ export function renderChartSvg(
   const gridLines = [0, 0.25, 0.5, 0.75, 1]
     .map((f) => {
       const y = PAD.top + CHART_H - f * CHART_H;
-      const label = fmtNum(Math.round(niceMax * f));
+      const label = fmtNum(Math.round(yMin + (yMax - yMin) * f));
       return `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="1" stroke-dasharray="${f === 0 ? "0" : "2,2"}"/><text x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${label}</text>`;
     })
     .join("");
@@ -125,6 +133,13 @@ function niceCeil(n: number): number {
   const m = n / base;
   const step = m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10;
   return step * base;
+}
+
+function niceFloor(n: number): number {
+  if (n <= 0) return 0;
+  const exp = Math.floor(Math.log10(n));
+  const base = Math.pow(10, exp);
+  return Math.floor(n / base) * base;
 }
 
 export function renderChartPageHtml(
