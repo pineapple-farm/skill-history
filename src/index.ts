@@ -5,6 +5,7 @@ import {
   renderChartSvg,
   renderEmptySvg,
   renderNotFoundSvg,
+  fmtNum,
   type Snapshot,
   type SkillMeta,
 } from "./chart";
@@ -39,6 +40,7 @@ app.get("/", (c) => {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <title>skill-history.com — Track ClawHub skill download history</title>
 <meta name="description" content="Track and visualize ClawHub skill download history. Star-history, for agent skills.">
 <link rel="canonical" href="https://skill-history.com/">
@@ -541,6 +543,45 @@ const SVG_HEADERS = {
   "Cache-Control": "public, max-age=60, s-maxage=60",
   "Access-Control-Allow-Origin": "*",
 };
+
+app.get("/badge/:handle/:slugSvg", async (c) => {
+  const handle = c.req.param("handle");
+  const slugSvg = c.req.param("slugSvg");
+  if (!slugSvg.endsWith(".svg")) {
+    return c.notFound();
+  }
+  const slug = slugSvg.slice(0, -4);
+
+  const row = await c.env.DB.prepare(
+    `SELECT sn.downloads FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
+     WHERE s.handle = ? AND s.slug = ? ORDER BY sn.captured_at DESC LIMIT 1`,
+  )
+    .bind(handle, slug)
+    .first<{ downloads: number }>();
+
+  const count = row ? fmtNum(row.downloads) : "unknown";
+
+  const label = "downloads";
+  const labelWidth = 70;
+  const countWidth = label === "downloads" ? Math.max(45, count.length * 7 + 10) : 50;
+  const totalWidth = labelWidth + countWidth;
+
+  const badge = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="20" role="img" aria-label="${label}: ${count}">
+  <linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>
+  <clipPath id="r"><rect width="${totalWidth}" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="${labelWidth}" height="20" fill="#555"/>
+    <rect x="${labelWidth}" width="${countWidth}" height="20" fill="#f97316"/>
+    <rect width="${totalWidth}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
+    <text x="${labelWidth / 2}" y="14">${label}</text>
+    <text x="${labelWidth + countWidth / 2}" y="14">${count}</text>
+  </g>
+</svg>`;
+
+  return new Response(badge, { status: row ? 200 : 404, headers: SVG_HEADERS });
+});
 
 app.get("/chart/:handle/:slugSvg", async (c) => {
   const handle = c.req.param("handle");

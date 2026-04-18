@@ -32,7 +32,7 @@ function escapeXml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function fmtNum(n: number): string {
+export function fmtNum(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
   return n.toString();
@@ -172,8 +172,9 @@ export function renderChartPageHtml(
   origin: string,
 ): string {
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
-  const svgUrl = `${origin}/chart/${skill.handle}/${skill.slug}.svg`;
-  const pageUrl = `${origin}/${skill.handle}/${skill.slug}`;
+  const CANONICAL_ORIGIN = "https://skill-history.com";
+  const svgUrl = `${CANONICAL_ORIGIN}/chart/${skill.handle}/${skill.slug}.svg`;
+  const pageUrl = `${CANONICAL_ORIGIN}/${skill.handle}/${skill.slug}`;
   const clawhubUrl = `https://clawhub.ai/${skill.handle}/${skill.slug}`;
   const embedMarkdown = `[![Download history](${svgUrl})](${pageUrl})`;
   const embedEscaped = escapeXml(embedMarkdown);
@@ -192,6 +193,7 @@ export function renderChartPageHtml(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <title>${title} — skill-history.com</title>
 <meta name="description" content="Download history for ClawHub skill ${skill.handle}/${skill.slug}">
 <link rel="canonical" href="https://skill-history.com/${skill.handle}/${skill.slug}">
