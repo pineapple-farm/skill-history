@@ -185,8 +185,11 @@ export function renderChartPageHtml(
   const svgUrl = `${CANONICAL_ORIGIN}/chart/${skill.handle}/${skill.slug}.svg`;
   const pageUrl = `${CANONICAL_ORIGIN}/${skill.handle}/${skill.slug}`;
   const clawhubUrl = `https://clawhub.ai/${skill.handle}/${skill.slug}`;
+  const badgeUrl = `${CANONICAL_ORIGIN}/badge/${skill.handle}/${skill.slug}.svg`;
   const embedMarkdown = `[![Download history](${svgUrl})](${pageUrl})`;
   const embedEscaped = escapeXml(embedMarkdown);
+  const badgeMarkdown = `[![Downloads](${badgeUrl})](${pageUrl})`;
+  const badgeEscaped = escapeXml(badgeMarkdown);
   const latest = snapshots.at(-1);
   const delta = computeDeltas(snapshots);
 
@@ -255,19 +258,34 @@ export function renderChartPageHtml(
 <h2>Embed this chart</h2>
 <div class="embed-section">
   <div class="embed-actions">
-    <button id="copy-btn" class="btn-small" onclick="copyEmbed()">Copy</button>
+    <button id="copy-chart-btn" class="btn-small" onclick="copyChart()">Copy</button>
   </div>
   <pre id="embed-code">${embedEscaped}</pre>
-  <p style="color:#6b7280;font-size:13px;margin-top:8px;">Paste this into your README to show a live download chart.</p>
+</div>
+<h2>Or use a compact badge</h2>
+<div class="embed-section">
+  <div style="margin-bottom:8px;"><img src="${badgeUrl}" alt="Downloads badge"></div>
+  <div class="embed-actions">
+    <button id="copy-badge-btn" class="btn-small" onclick="copyBadge()">Copy</button>
+  </div>
+  <pre id="badge-code">${badgeEscaped}</pre>
 </div>
 <footer>
   Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
 </footer>
 <script>
-var embedText = ${JSON.stringify(embedMarkdown)};
-function copyEmbed() {
-  navigator.clipboard.writeText(embedText).then(function() {
-    var btn = document.getElementById("copy-btn");
+var chartText = ${JSON.stringify(embedMarkdown)};
+var badgeText = ${JSON.stringify(badgeMarkdown)};
+function copyChart() {
+  navigator.clipboard.writeText(chartText).then(function() {
+    var btn = document.getElementById("copy-chart-btn");
+    btn.textContent = "Copied!";
+    setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+  });
+}
+function copyBadge() {
+  navigator.clipboard.writeText(badgeText).then(function() {
+    var btn = document.getElementById("copy-badge-btn");
     btn.textContent = "Copied!";
     setTimeout(function() { btn.textContent = "Copy"; }, 2000);
   });
