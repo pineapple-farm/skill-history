@@ -218,7 +218,7 @@ ${GA_TAG}
 </section>
 
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
 </footer>
 
 <script>
@@ -387,7 +387,7 @@ ${GA_TAG}
 <p>Yes. The entire codebase is at <a href="https://github.com/pineapple-farm/skill-history">github.com/pineapple-farm/skill-history</a>. Feature requests, bug reports, and PRs are welcome.</p>
 
 <footer>
-  <a href="/">Home</a> &middot; Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
+  <a href="/">Home</a> &middot; Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
 </footer>
 </body>
 </html>`);

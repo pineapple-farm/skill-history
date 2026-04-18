@@ -284,7 +284,7 @@ ${GA_TAG}
   <pre id="badge-code">${badgeEscaped}</pre>
 </div>
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="/faq">FAQ</a> · <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">blog</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a> · <a href="https://clawhub.ai">Browse skills on ClawHub</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="/faq">FAQ</a> · <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> · <a href="https://github.com/pineapple-farm/skill-history">Source</a> · <a href="https://clawhub.ai">ClawHub</a>
 </footer>
 <script>
 var chartText = ${JSON.stringify(embedMarkdown)};
