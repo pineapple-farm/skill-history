@@ -1,30 +1,57 @@
 # skill-history
 
-Track and visualize agent skill download history from ClawHub. An embeddable chart for READMEs — star-history, but for agent skills.
+Track and visualize agent skill download history from [ClawHub](https://clawhub.ai). An embeddable chart for READMEs — [star-history](https://star-history.com), but for agent skills.
 
 [skill-history.com](https://skill-history.com) · built by [Pineapple AI](https://pineappleai.com)
 
-## Status
+[![Download History](https://skill-history.com/chart/gavinlinasd/self-preserve.svg)](https://skill-history.com/gavinlinasd/self-preserve)
 
-V1 in development. See [PRD on Notion](https://www.notion.so/skill-history-com-PRD-344c19d3c0dc8194ac55c141945aebac).
+## How it works
+
+skill-history.com tracks daily download counts for all 54,000+ skills on ClawHub. Every skill gets a chart page and an embeddable SVG:
+
+- **Chart page** — `skill-history.com/{handle}/{slug}`
+- **SVG embed** — `skill-history.com/chart/{handle}/{slug}.svg`
+- **Compact badge** — `skill-history.com/badge/{handle}/{slug}.svg`
+
+Your `{handle}` is your GitHub username (ClawHub uses GitHub OAuth), and `{slug}` is your skill's slug on ClawHub.
+
+### Add to your README
+
+```markdown
+[![Download History](https://skill-history.com/chart/YOUR_HANDLE/YOUR_SLUG.svg)](https://skill-history.com/YOUR_HANDLE/YOUR_SLUG)
+```
+
+Or use the link generator at [skill-history.com](https://skill-history.com).
 
 ## Architecture
 
-- **Cloudflare Workers + Hono** — HTTP + scheduled sweep
-- **Cloudflare D1 (SQLite)** — skills + daily snapshots
-- **Data source** — ClawHub Convex backend (`wry-manatee-359.convex.cloud`), queried directly via `listPublicPageV4`
+- **Cloudflare Workers + Hono** — serves the site, chart SVGs, and scheduled sweeps
+- **Cloudflare D1 (SQLite)** — stores skills and daily snapshots
+- **d3-shape** — smooth monotone curves (same algorithm as star-history)
+- **Data source** — ClawHub public API, sweeps every 2 hours
 
-Sweep runs every 6h, paginates the full catalog (~54k skills at ~200 items/page, ~2.4 min wall time), upserts skills and writes one snapshot per skill per UTC day.
+## API
 
-## Local setup
+All skill pages return JSON when requested with `Accept: application/json`:
+
+```bash
+curl -H "Accept: application/json" https://skill-history.com/gavinlinasd/self-preserve
+```
+
+Full OpenAPI spec at [skill-history.com/api/openapi.json](https://skill-history.com/api/openapi.json).
+
+For AI agents: [skill-history.com/llms.txt](https://skill-history.com/llms.txt).
+
+## Local development
 
 ```bash
 npm install
 
-# One-time: authenticate with Cloudflare
+# Authenticate with Cloudflare
 wrangler login
 
-# One-time: create the D1 database, copy the database_id into wrangler.jsonc
+# Create D1 database, copy database_id into wrangler.jsonc
 wrangler d1 create skill-history
 
 # Apply schema to local dev DB
@@ -32,18 +59,30 @@ npm run db:migrate:local
 
 # Run locally
 npm run dev
-# Trigger a sweep manually: curl -X POST http://localhost:8787/admin/sweep
 ```
 
-## Deploy
+## Roadmap
 
-```bash
-# Apply schema to production DB
-npm run db:migrate:remote
+- [x] Daily download tracking for all ClawHub skills
+- [x] Embeddable SVG chart + compact badge
+- [x] Landing page with link generator
+- [x] Agent discoverability (llms.txt, OpenAPI)
+- [ ] Smooth d3-powered chart rendering (full axis upgrade)
+- [ ] Multi-source tracking (GitHub stars, non-ClawHub installs)
+- [ ] Comparison charts (overlay multiple skills)
+- [ ] Weekly "fastest growing skills" reports
+- [ ] MCP server for agent tool access
 
-# Deploy Worker + cron
-npm run deploy
-```
+Have an idea? [Open an issue](https://github.com/pineapple-farm/skill-history/issues/new) or submit a PR — we'd love your input.
+
+## Contributing
+
+This is a brand new project and we're actively shaping it based on what skill authors actually want. Contributions welcome:
+
+- **Feature requests** — [open an issue](https://github.com/pineapple-farm/skill-history/issues/new) describing what you'd like to see
+- **Bug reports** — if a chart looks wrong or a skill is missing, let us know
+- **Pull requests** — code, docs, or design improvements are all welcome
+- **Data sources** — ideas for tracking skills beyond ClawHub (GitHub stars, other registries)
 
 ## License
 
