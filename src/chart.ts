@@ -38,29 +38,38 @@ export function fmtNum(n: number): string {
   return n.toString();
 }
 
+const DARK_MODE_STYLE = `<style>
+  @media (prefers-color-scheme: dark) {
+    .bg { fill: #0f172a; }
+    .text-primary { fill: #e5e7eb; }
+    .text-muted { fill: #9ca3af; }
+    .grid { stroke: #334155; }
+  }
+</style>`;
+
 function svgOpen(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${DARK_MODE_STYLE}`;
 }
 
 function attributionText(): string {
-  return `<text x="${W - 8}" y="${H - 8}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${ATTRIBUTION}</text>`;
+  return `<text class="text-muted" x="${W - 8}" y="${H - 8}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${ATTRIBUTION}</text>`;
 }
 
 export function renderEmptySvg(skill: SkillMeta): string {
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
   return `${svgOpen()}
-  <rect width="100%" height="100%" fill="white"/>
-  <text x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${title}</text>
-  <text x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">tracking starts on next sweep</text>
+  <rect class="bg" width="100%" height="100%" fill="white"/>
+  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${title}</text>
+  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">tracking starts on next sweep</text>
   ${attributionText()}
 </svg>`;
 }
 
 export function renderNotFoundSvg(handle: string, slug: string): string {
   return `${svgOpen()}
-  <rect width="100%" height="100%" fill="white"/>
-  <text x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${escapeXml(handle)}/${escapeXml(slug)}</text>
-  <text x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">skill not found on ClawHub</text>
+  <rect class="bg" width="100%" height="100%" fill="white"/>
+  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${escapeXml(handle)}/${escapeXml(slug)}</text>
+  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">skill not found on ClawHub</text>
   ${attributionText()}
 </svg>`;
 }
@@ -99,7 +108,7 @@ export function renderChartSvg(
     .map((f) => {
       const y = PAD.top + CHART_H - f * CHART_H;
       const label = fmtNum(Math.round(yMin + (yMax - yMin) * f));
-      return `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="1" stroke-dasharray="${f === 0 ? "0" : "2,2"}"/><text x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${label}</text>`;
+      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="1" stroke-dasharray="${f === 0 ? "0" : "2,2"}"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${label}</text>`;
     })
     .join("");
 
@@ -138,14 +147,14 @@ export function renderChartSvg(
 
   return `${svgOpen()}
   ${gradient}
-  <rect width="100%" height="100%" fill="white"/>
-  <text x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
-  <text x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
+  <rect class="bg" width="100%" height="100%" fill="white"/>
+  <text class="text-primary" x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
+  <text class="text-muted" x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
   ${gridLines}
   ${smoothLine}
   ${dots}
-  <text x="${PAD.left}" y="${H - 16}" font-size="10" fill="${MUTED_COLOR}">${firstDate}</text>
-  <text x="${W - PAD.right}" y="${H - 16}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${lastDate}</text>
+  <text class="text-muted" x="${PAD.left}" y="${H - 16}" font-size="10" fill="${MUTED_COLOR}">${firstDate}</text>
+  <text class="text-muted" x="${W - PAD.right}" y="${H - 16}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${lastDate}</text>
   ${attributionText()}
 </svg>`;
 }
