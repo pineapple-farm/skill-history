@@ -12,7 +12,6 @@ import {
 
 type Env = {
   DB: D1Database;
-  ADMIN_SECRET?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -259,9 +258,6 @@ Returns an SVG chart image of download history.
 Embeddable in GitHub READMEs and web pages.
 Headers: image/svg+xml, CORS enabled.
 
-### GET /healthz
-System status: total skills tracked, snapshots today, sweep progress.
-
 ## URL mapping
 - ClawHub: clawhub.ai/{handle}/{slug}
 - skill-history: skill-history.com/{handle}/{slug}
@@ -422,99 +418,9 @@ app.get("/api/openapi.json", (c) => {
           },
         },
       },
-      "/healthz": {
-        get: {
-          summary: "System health and sweep status",
-          description:
-            "Returns total skills tracked, snapshots today, and sweep progress.",
-          responses: {
-            "200": {
-              description: "Health status",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      status: { type: "string", example: "ok" },
-                      today: {
-                        type: "string",
-                        format: "date",
-                        example: "2026-04-16",
-                      },
-                      skills: { type: "integer" },
-                      snapshots: { type: "integer" },
-                      snapshots_today: { type: "integer" },
-                      sweep: {
-                        type: "object",
-                        properties: {
-                          captured_at: {
-                            type: "string",
-                            format: "date",
-                          },
-                          pages_done_today: { type: "integer" },
-                          complete_for_today: { type: "boolean" },
-                          cursor_in_progress: { type: "boolean" },
-                          updated_at_utc: {
-                            type: "string",
-                            format: "date-time",
-                            nullable: true,
-                          },
-                        },
-                      },
-                    },
-                    required: [
-                      "status",
-                      "today",
-                      "skills",
-                      "snapshots",
-                      "snapshots_today",
-                      "sweep",
-                    ],
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
     },
   };
   return c.json(spec);
-});
-
-app.get("/healthz", async (c) => {
-  const today = new Date().toISOString().slice(0, 10);
-  const [counts, state] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT
-         (SELECT COUNT(*) FROM skills) AS skills,
-         (SELECT COUNT(*) FROM snapshots) AS snapshots,
-         (SELECT COUNT(*) FROM snapshots WHERE captured_at = ?) AS snapshots_today`,
-    )
-      .bind(today)
-      .first<{ skills: number; snapshots: number; snapshots_today: number }>(),
-    c.env.DB.prepare(
-      "SELECT cursor, captured_at, pages_done, updated_at FROM sweep_state WHERE id = 1",
-    ).first<{
-      cursor: string | null;
-      captured_at: string | null;
-      pages_done: number;
-      updated_at: number;
-    }>(),
-  ]);
-  const sweep =
-    state && state.captured_at === today
-      ? {
-          captured_at: state.captured_at,
-          pages_done_today: state.pages_done,
-          complete_for_today: state.cursor === null && state.pages_done > 0,
-          cursor_in_progress: !!state.cursor,
-          updated_at_utc: state.updated_at
-            ? new Date(state.updated_at).toISOString()
-            : null,
-        }
-      : { captured_at: today, pages_done_today: 0, complete_for_today: false };
-  return c.json({ status: "ok", today, ...counts, sweep });
 });
 
 async function loadSkillAndSnapshots(
@@ -625,15 +531,6 @@ app.get("/:handle/:slug", async (c) => {
   const url = new URL(c.req.url);
   const origin = `${url.protocol}//${url.host}`;
   return c.html(renderChartPageHtml(data.skill, data.snapshots, origin));
-});
-
-app.post("/admin/sweep", async (c) => {
-  const secret = c.env.ADMIN_SECRET;
-  if (!secret || c.req.header("x-admin-secret") !== secret) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-  const result = await runSweep(c.env.DB);
-  return c.json(result);
 });
 
 export default {

@@ -7,7 +7,7 @@ const USER_AGENT =
 // Cloudflare free-plan caps subrequests (fetch calls) at 50 per invocation.
 // D1 batch calls are internal bindings, not subrequests, so only Convex
 // fetches count. 48 pages = 48 fetches, safely under 50.
-// With 0 */4 cron (6 fires/day): 6 × 48 = 288 > 280 pages = full sweep.
+// With 0 */2 cron (12 fires/day): 12 × 48 = 576 > 280 pages = full sweep.
 const MAX_PAGES_PER_RUN = 48;
 
 type SkillRow = {
