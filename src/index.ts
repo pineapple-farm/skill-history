@@ -41,11 +41,11 @@ app.get("/", (c) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <title>skill-history.com — Track ClawHub skill download history</title>
-<meta name="description" content="Track and visualize ClawHub skill download history. Star-history, for agent skills.">
+<meta name="description" content="The missing download tracker for agent skills.">
 <link rel="canonical" href="https://skill-history.com/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="skill-history.com">
-<meta property="og:description" content="Track and visualize ClawHub skill download history. Star-history, for agent skills.">
+<meta property="og:description" content="The missing download tracker for agent skills.">
 <meta property="og:url" content="https://skill-history.com/">
 <meta name="twitter:card" content="summary">
 <style>
@@ -94,7 +94,7 @@ app.get("/", (c) => {
 <body>
 <header>
   <h1>skill-history.com</h1>
-  <p class="tagline">Track and visualize ClawHub skill download history. Star-history, for agent skills.</p>
+  <p class="tagline">The missing download tracker for agent skills.</p>
 </header>
 
 <section>
