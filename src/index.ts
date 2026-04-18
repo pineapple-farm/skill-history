@@ -136,6 +136,18 @@ app.get("/", (c) => {
   ${exampleCards}
 </section>
 
+<section>
+  <h2>FAQ</h2>
+  <h3>Why does data only start from April 2026?</h3>
+  <p>ClawHub doesn&rsquo;t provide historical download data &mdash; only a current total. Unlike GitHub (where star-history can reconstruct history from timestamped star events), ClawHub downloads are a single cumulative counter with no event log. We started recording daily snapshots on April 16, 2026 and capture new data every few hours. The longer we run, the richer the charts get.</p>
+  <h3>How is this different from star-history.com?</h3>
+  <p>Star-history tracks GitHub stars, which have timestamps &mdash; so they can reconstruct a full history back to day one. ClawHub downloads have no timestamps, so we can only track from the day we started polling. That&rsquo;s why every chart here begins in April 2026. Think of it as: star-history looks backward, skill-history looks forward.</p>
+  <h3>Will my chart keep updating?</h3>
+  <p>Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically &mdash; no setup, no tokens, no maintenance on your end.</p>
+  <h3>My skill isn&rsquo;t showing up?</h3>
+  <p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours on the next sweep. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
+</section>
+
 <footer>
   Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
 </footer>
