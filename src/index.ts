@@ -14,6 +14,9 @@ type Env = {
   DB: D1Database;
 };
 
+const GA_TAG = `<script async src="https://www.googletagmanager.com/gtag/js?id=G-06QZRBETMR"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-06QZRBETMR');</script>`;
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", (c) => {
@@ -37,6 +40,7 @@ app.get("/", (c) => {
   return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
+${GA_TAG}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
@@ -271,6 +275,7 @@ app.get("/faq", (c) => {
   return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
+${GA_TAG}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
