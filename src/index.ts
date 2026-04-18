@@ -139,17 +139,17 @@ app.get("/", (c) => {
 <section>
   <h2>FAQ</h2>
   <h3>Why does data only start from April 2026?</h3>
-  <p>ClawHub doesn&rsquo;t provide historical download data &mdash; only a current total. Unlike GitHub (where star-history can reconstruct history from timestamped star events), ClawHub downloads are a single cumulative counter with no event log. We started recording daily snapshots on April 16, 2026 and capture new data every few hours. The longer we run, the richer the charts get.</p>
+  <p>ClawHub doesn&rsquo;t provide historical download data &mdash; only a current cumulative total. Unlike GitHub stars (which have timestamps, letting star-history reconstruct a full history), ClawHub downloads are a single counter with no event log. We started recording daily snapshots on April 16, 2026. The longer we run, the richer the charts get.</p>
   <h3>How is this different from star-history.com?</h3>
-  <p>Star-history tracks GitHub stars, which have timestamps &mdash; so they can reconstruct a full history back to day one. ClawHub downloads have no timestamps, so we can only track from the day we started polling. That&rsquo;s why every chart here begins in April 2026. Think of it as: star-history looks backward, skill-history looks forward.</p>
+  <p>Star-history tracks GitHub stars, which have timestamps &mdash; so they can reconstruct a full history back to day one. ClawHub downloads don&rsquo;t have timestamps, so we can only track from the day we started polling. Think of it as: star-history looks backward, skill-history looks forward.</p>
   <h3>Will my chart keep updating?</h3>
   <p>Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically &mdash; no setup, no tokens, no maintenance on your end.</p>
   <h3>My skill isn&rsquo;t showing up?</h3>
-  <p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours on the next sweep. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
+  <p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
 </section>
 
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
 </footer>
 
 <script>
@@ -198,6 +198,60 @@ document.getElementById('skill-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') generateLinks();
 });
 </script>
+</body>
+</html>`);
+});
+
+app.get("/faq", (c) => {
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<title>FAQ — skill-history.com</title>
+<meta name="description" content="Frequently asked questions about skill-history.com — data coverage, how it works, and how it differs from star-history.">
+<link rel="canonical" href="https://skill-history.com/faq">
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111827; line-height: 1.6; }
+  h1 { margin: 0 0 24px; font-size: 24px; }
+  h3 { margin: 32px 0 8px; font-size: 16px; }
+  p { font-size: 15px; margin: 0 0 12px; }
+  a { color: #f97316; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
+  footer a { color: #6b7280; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e5e7eb; background: #0f172a; }
+    footer, footer a { color: #9ca3af; }
+  }
+</style>
+</head>
+<body>
+<h1><a href="/" style="color:inherit;text-decoration:none;">skill-history.com</a> — FAQ</h1>
+
+<h3>Why does data only start from April 2026?</h3>
+<p>ClawHub doesn&rsquo;t provide historical download data &mdash; only a current cumulative total. Unlike GitHub stars (which have timestamps, letting star-history reconstruct a full history), ClawHub downloads are a single counter with no event log. We started recording daily snapshots on April 16, 2026. The longer we run, the richer the charts get.</p>
+
+<h3>How is this different from star-history.com?</h3>
+<p>Star-history tracks GitHub stars, which have timestamps &mdash; so they can reconstruct a full history back to day one. ClawHub downloads don&rsquo;t have timestamps, so we can only track from the day we started polling. Think of it as: star-history looks backward, skill-history looks forward. We&rsquo;re building the history that doesn&rsquo;t exist yet.</p>
+
+<h3>Will my chart keep updating?</h3>
+<p>Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically &mdash; no setup, no tokens, no maintenance on your end.</p>
+
+<h3>My skill isn&rsquo;t showing up?</h3>
+<p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours on the next sweep. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
+
+<h3>What metrics do you track?</h3>
+<p>We capture daily downloads (cumulative) and installs_all_time from ClawHub. The chart shows downloads by default. We&rsquo;re exploring additional sources like GitHub clone traffic for skills distributed outside ClawHub.</p>
+
+<h3>Is this open source?</h3>
+<p>Yes. The entire codebase is at <a href="https://github.com/pineapple-farm/skill-history">github.com/pineapple-farm/skill-history</a>. Feature requests, bug reports, and PRs are welcome.</p>
+
+<footer>
+  <a href="/">Home</a> &middot; Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
+</footer>
 </body>
 </html>`);
 });
