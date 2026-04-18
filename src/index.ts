@@ -40,14 +40,76 @@ app.get("/", (c) => {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-<title>skill-history.com — Track ClawHub skill download history</title>
-<meta name="description" content="The missing download tracker for agent skills.">
+<title>ClawHub Download Analytics — skill-history.com</title>
+<meta name="description" content="Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills. Embed a badge or history chart in your README in seconds.">
 <link rel="canonical" href="https://skill-history.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="skill-history.com">
-<meta property="og:description" content="The missing download tracker for agent skills.">
+<meta property="og:title" content="ClawHub Download Analytics — skill-history.com">
+<meta property="og:description" content="Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills. Embed a badge or history chart in your README in seconds.">
 <meta property="og:url" content="https://skill-history.com/">
 <meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "skill-history.com",
+  "url": "https://skill-history.com",
+  "description": "Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills.",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Pineapple AI",
+    "url": "https://pineappleai.com"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why does data only start from April 2026?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ClawHub doesn't provide historical download data — only a current cumulative total. Unlike GitHub stars (which have timestamps, letting star-history reconstruct a full history), ClawHub downloads are a single counter with no event log. We started recording daily snapshots on April 16, 2026. The longer we run, the richer the charts get."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is this different from star-history.com?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Star-history tracks GitHub stars, which have timestamps — so they can reconstruct a full history back to day one. ClawHub downloads don't have timestamps, so we can only track from the day we started polling. Think of it as: star-history looks backward, skill-history looks forward."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will my chart keep updating?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically — no setup, no tokens, no maintenance on your end."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "My skill isn't showing up?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours. If it still doesn't show, open an issue."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will you track skills from other registries?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — skill-history is built to be registry-agnostic. ClawHub is the starting point since it's where the agent skill ecosystem is most concentrated today. Support for additional registries is on the roadmap."
+      }
+    }
+  ]
+}
+</script>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111827; line-height: 1.5; }
@@ -93,8 +155,9 @@ app.get("/", (c) => {
 </head>
 <body>
 <header>
-  <h1>skill-history.com</h1>
-  <p class="tagline">The missing download tracker for agent skills.</p>
+  <h1>Download analytics for every ClawHub skill</h1>
+  <p class="tagline">Like star-history, but for ClawHub downloads. Track 54,000+ skills — free, no signup, no tokens.</p>
+  <p style="color:#9ca3af;font-size:13px;margin:4px 0 0;">Starting with ClawHub. More skill registries coming.</p>
 </header>
 
 <section>
@@ -146,6 +209,8 @@ app.get("/", (c) => {
   <p>Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically &mdash; no setup, no tokens, no maintenance on your end.</p>
   <h3>My skill isn&rsquo;t showing up?</h3>
   <p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
+  <h3>Will you track skills from other registries?</h3>
+  <p>Yes &mdash; skill-history is built to be registry-agnostic. ClawHub is the starting point since it&rsquo;s where the agent skill ecosystem is most concentrated today. Support for additional registries is on the roadmap.</p>
 </section>
 
 <footer>
@@ -210,8 +275,72 @@ app.get("/faq", (c) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <title>FAQ — skill-history.com</title>
-<meta name="description" content="Frequently asked questions about skill-history.com — data coverage, how it works, and how it differs from star-history.">
+<meta name="description" content="How skill-history tracks ClawHub download data, why historical data starts April 2026, and how to embed charts in your README.">
 <link rel="canonical" href="https://skill-history.com/faq">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why does data only start from April 2026?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ClawHub doesn't provide historical download data — only a current cumulative total. Unlike GitHub stars (which have timestamps, letting star-history reconstruct a full history), ClawHub downloads are a single counter with no event log. We started recording daily snapshots on April 16, 2026. The longer we run, the richer the charts get."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is this different from star-history.com?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Star-history tracks GitHub stars, which have timestamps — so they can reconstruct a full history back to day one. ClawHub downloads don't have timestamps, so we can only track from the day we started polling. Think of it as: star-history looks backward, skill-history looks forward. We're building the history that doesn't exist yet."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will my chart keep updating?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically — no setup, no tokens, no maintenance on your end."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "My skill isn't showing up?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours on the next sweep. If it still doesn't show, open an issue."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will you track skills from other registries?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — skill-history is built to be registry-agnostic. ClawHub is the starting point since it's where the agent skill ecosystem is most concentrated today. Support for additional registries is on the roadmap."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What metrics do you track?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We capture daily downloads (cumulative) and installs_all_time from ClawHub. The chart shows downloads by default. We're exploring additional sources like GitHub clone traffic for skills distributed outside ClawHub."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is this open source?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The entire codebase is at github.com/pineapple-farm/skill-history. Feature requests, bug reports, and PRs are welcome."
+      }
+    }
+  ]
+}
+</script>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111827; line-height: 1.6; }
@@ -242,6 +371,9 @@ app.get("/faq", (c) => {
 
 <h3>My skill isn&rsquo;t showing up?</h3>
 <p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours on the next sweep. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
+
+<h3>Will you track skills from other registries?</h3>
+<p>Yes &mdash; skill-history is built to be registry-agnostic. ClawHub is the starting point since it&rsquo;s where the agent skill ecosystem is most concentrated today. Support for additional registries is on the roadmap.</p>
 
 <h3>What metrics do you track?</h3>
 <p>We capture daily downloads (cumulative) and installs_all_time from ClawHub. The chart shows downloads by default. We&rsquo;re exploring additional sources like GitHub clone traffic for skills distributed outside ClawHub.</p>

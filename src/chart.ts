@@ -206,15 +206,25 @@ export function renderChartPageHtml(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-<title>${title} — skill-history.com</title>
-<meta name="description" content="Download history for ClawHub skill ${skill.handle}/${skill.slug}">
+<title>${skill.slug} downloads — ClawHub skill stats | skill-history.com</title>
+<meta name="description" content="Download history and stats for the ${skill.slug} ClawHub skill by ${skill.handle}. ${latest ? latest.downloads.toLocaleString() : '0'} total downloads, ${delta.d7 >= 0 ? '+' : ''}${delta.d7.toLocaleString()} in the last 7 days. Free embeddable chart and badge.">
 <link rel="canonical" href="https://skill-history.com/${skill.handle}/${skill.slug}">
 <meta property="og:type" content="website">
-<meta property="og:title" content="${title} — skill-history.com">
-<meta property="og:description" content="Download history for ${skill.handle}/${skill.slug} on ClawHub">
+<meta property="og:title" content="${skill.slug} downloads — ClawHub skill stats | skill-history.com">
+<meta property="og:description" content="Download history and stats for the ${skill.slug} ClawHub skill by ${skill.handle}. ${latest ? latest.downloads.toLocaleString() : '0'} total downloads, ${delta.d7 >= 0 ? '+' : ''}${delta.d7.toLocaleString()} in the last 7 days. Free embeddable chart and badge.">
 <meta property="og:url" content="https://skill-history.com/${skill.handle}/${skill.slug}">
 <meta property="og:image" content="https://skill-history.com/chart/${skill.handle}/${skill.slug}.svg">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "${title}",
+  "author": { "@type": "Person", "name": "${skill.handle}" },
+  "url": "${clawhubUrl}",
+  "applicationCategory": "AI Agent Skill"
+}
+</script>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111827; line-height: 1.5; }
@@ -247,14 +257,14 @@ export function renderChartPageHtml(
 </head>
 <body>
 <header>
-  <h1>${title}</h1>
+  <h1>Download history for ${title}</h1>
   <div class="meta"><a href="${clawhubUrl}">${skill.handle}/${skill.slug}</a> on ClawHub</div>
 </header>
 <section class="stats">
   <div class="headline">${headline}</div>
   <div class="subline">${subline}</div>
 </section>
-<div class="chart"><img src="${svgUrl}" alt="Download history for ${title}"></div>
+<div class="chart"><img src="${svgUrl}" alt="ClawHub download history chart for ${skill.slug} by ${skill.handle}"></div>
 <h2>Embed this chart</h2>
 <div class="embed-section">
   <div class="embed-actions">
@@ -271,7 +281,7 @@ export function renderChartPageHtml(
   <pre id="badge-code">${badgeEscaped}</pre>
 </div>
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="/faq">FAQ</a> · <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">blog</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="/faq">FAQ</a> · <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">blog</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a> · <a href="https://clawhub.ai">Browse skills on ClawHub</a>
 </footer>
 <script>
 var chartText = ${JSON.stringify(embedMarkdown)};
