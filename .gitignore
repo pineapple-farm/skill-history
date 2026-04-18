@@ -141,3 +141,7 @@ vite.config.ts.timestamp-*
 # Wrangler
 .wrangler/
 .dev.vars
+
+# Gas Town / internal
+outreach-candidates*.csv
+*.internal.*
