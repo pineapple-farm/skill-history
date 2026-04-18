@@ -299,10 +299,15 @@ app.get("/llms.txt", (c) => {
   return c.text(`# skill-history.com
 
 > Track and visualize ClawHub agent skill download history over time.
+> Like star-history.com, but for agent skills.
 
 skill-history.com records daily download snapshots for all 54,000+ skills
-on ClawHub (clawhub.ai). Authors can embed a live-updating SVG chart in
-their GitHub README showing download growth over time.
+on ClawHub (clawhub.ai). Authors can embed a live-updating SVG chart or
+compact badge in their GitHub README showing download growth over time.
+
+Data collection started April 16, 2026. ClawHub does not provide historical
+download data (only a current cumulative total), so charts begin from that
+date. New snapshots are captured every 2 hours.
 
 ## Data available
 
@@ -312,26 +317,49 @@ their GitHub README showing download growth over time.
 
 ## API endpoints
 
-All endpoints return JSON when requested with Accept: application/json.
+All skill pages return JSON when requested with Accept: application/json.
 
 ### GET /{handle}/{slug}
 Returns skill metadata and all daily snapshots.
 Example: GET /gavinlinasd/self-preserve
+Headers: Accept: application/json
 Response: { skill: { handle, slug, display_name }, snapshots: [{ captured_at, downloads, installs_all_time }] }
 
 ### GET /chart/{handle}/{slug}.svg
-Returns an SVG chart image of download history.
+Returns an SVG line chart of download history over time.
 Embeddable in GitHub READMEs and web pages.
-Headers: image/svg+xml, CORS enabled.
+Supports dark mode via prefers-color-scheme media query.
+Headers: Content-Type: image/svg+xml, Access-Control-Allow-Origin: *
+
+### GET /badge/{handle}/{slug}.svg
+Returns a compact shields.io-style badge showing current download count.
+Embeddable inline in READMEs.
+Headers: Content-Type: image/svg+xml, Access-Control-Allow-Origin: *
+
+### GET /api/openapi.json
+Full OpenAPI 3.0.3 specification for all endpoints.
+
+### GET /faq
+Frequently asked questions about data coverage, how it works, and
+how it differs from star-history.com.
 
 ## URL mapping
 - ClawHub: clawhub.ai/{handle}/{slug}
 - skill-history: skill-history.com/{handle}/{slug}
 - GitHub: github.com/{handle}/{slug} (when repo exists; handle = GitHub username via OAuth)
 
+## Embedding
+
+Markdown for README chart embed:
+[![Download history](https://skill-history.com/chart/{handle}/{slug}.svg)](https://skill-history.com/{handle}/{slug})
+
+Markdown for compact badge:
+[![Downloads](https://skill-history.com/badge/{handle}/{slug}.svg)](https://skill-history.com/{handle}/{slug})
+
 ## About
 Built by Pineapple AI (https://pineappleai.com)
-Source: https://github.com/pineapple-farm/skill-history`);
+Source: https://github.com/pineapple-farm/skill-history
+Blog: https://gavinpineapple.substack.com`);
 });
 
 app.get("/api/openapi.json", (c) => {
