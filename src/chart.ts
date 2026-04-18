@@ -271,7 +271,7 @@ export function renderChartPageHtml(
   <pre id="badge-code">${badgeEscaped}</pre>
 </div>
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">blog</a> · <a href="https://github.com/pineapple-farm/skill-history">source</a>
 </footer>
 <script>
 var chartText = ${JSON.stringify(embedMarkdown)};

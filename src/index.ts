@@ -137,7 +137,7 @@ app.get("/", (c) => {
 </section>
 
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a>
 </footer>
 
 <script>
