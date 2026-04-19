@@ -248,7 +248,7 @@ ${GA_TAG}
   .embed-row { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
   .embed-option { flex: 1; min-width: 280px; }
   .embed-label { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-  .embed-code { font-size: 11px; padding: 8px; margin: 0; border-radius: 4px; max-height: 42px; overflow: hidden; word-break: break-all; line-height: 1.3; }
+  .embed-code { font-size: 11px; padding: 8px; margin: 0; border-radius: 4px; word-break: break-all; line-height: 1.3; white-space: pre-wrap; }
   .btn-embed { font-size: 11px; padding: 2px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; }
   .btn-embed:hover { background: #f9fafb; border-color: #9ca3af; }
   @media (prefers-color-scheme: dark) {
