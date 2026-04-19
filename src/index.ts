@@ -759,9 +759,19 @@ app.get("/:handle/:slug", async (c) => {
   if (wantsJson) {
     return c.json({ skill: data.skill, snapshots: data.snapshots });
   }
+  const moreByAuthorRows = await c.env.DB.prepare(
+    `SELECT s.slug, s.display_name, sn.downloads
+     FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
+     WHERE s.handle = ? AND s.slug != ?
+     AND sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+     ORDER BY sn.downloads DESC LIMIT 3`,
+  )
+    .bind(handle, slug)
+    .all<{ slug: string; display_name: string | null; downloads: number }>();
+  const moreByAuthor = moreByAuthorRows.results ?? [];
   const url = new URL(c.req.url);
   const origin = `${url.protocol}//${url.host}`;
-  return c.html(renderChartPageHtml(data.skill, data.snapshots, origin));
+  return c.html(renderChartPageHtml(data.skill, data.snapshots, origin, moreByAuthor));
 });
 
 export default {
