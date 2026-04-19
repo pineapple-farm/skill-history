@@ -19,14 +19,44 @@ const GA_TAG = `<script async src="https://www.googletagmanager.com/gtag/js?id=G
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get("/", (c) => {
-  const examples = [
-    { handle: "pskoett", slug: "self-improving-agent" },
-    { handle: "spclaudehome", slug: "skill-vetter" },
-    { handle: "oswalpalash", slug: "ontology" },
+app.get("/", async (c) => {
+  const featured = [
+    { handle: "gavinlinasd", slug: "self-preserve" },
+    { handle: "aeoess", slug: "agent-passport-system" },
   ];
 
-  const exampleCards = examples
+  const featuredCards = featured
+    .map(
+      (e) => `
+      <div class="chart">
+        <a href="/${e.handle}/${e.slug}">
+          <img src="/chart/${e.handle}/${e.slug}.svg" alt="Download history for ${e.handle}/${e.slug}" loading="lazy">
+        </a>
+      </div>`,
+    )
+    .join("");
+
+  // Trending: highest % growth over last 7 days, floor 100 downloads
+  const trending = await c.env.DB.prepare(
+    `SELECT s.handle, s.slug, s.display_name,
+            latest.downloads AS dl_now,
+            older.downloads AS dl_then,
+            CASE WHEN older.downloads > 0
+              THEN ROUND((latest.downloads - older.downloads) * 100.0 / older.downloads, 1)
+              ELSE 0 END AS growth_pct
+     FROM skills s
+     JOIN snapshots latest ON latest.skill_id = s.id
+       AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+     LEFT JOIN snapshots older ON older.skill_id = s.id
+       AND older.captured_at = (SELECT MAX(captured_at) FROM snapshots WHERE captured_at <= date((SELECT MAX(captured_at) FROM snapshots), '-7 days'))
+     WHERE latest.downloads >= 100
+       AND older.downloads IS NOT NULL
+       AND older.downloads > 0
+     ORDER BY growth_pct DESC
+     LIMIT 2`,
+  ).all<{ handle: string; slug: string; display_name: string | null; growth_pct: number }>();
+
+  const trendingCards = (trending.results ?? [])
     .map(
       (e) => `
       <div class="chart">
@@ -199,9 +229,14 @@ ${GA_TAG}
 </section>
 
 <section>
-  <h2>Popular skills</h2>
-  ${exampleCards}
+  <h2>Featured Skills</h2>
+  ${featuredCards}
 </section>
+
+${trendingCards ? `<section>
+  <h2>Trending on ClawHub</h2>
+  ${trendingCards}
+</section>` : ""}
 
 <section>
   <h2>FAQ</h2>
