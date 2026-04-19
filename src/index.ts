@@ -50,8 +50,7 @@ app.get("/", async (c) => {
        AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
      JOIN snapshots older ON older.skill_id = s.id
        AND older.captured_at = (SELECT MIN(captured_at) FROM snapshots)
-     WHERE latest.downloads >= 100
-       AND older.downloads > 0
+     WHERE older.downloads >= 100
        AND latest.downloads > older.downloads
      ORDER BY growth_pct DESC
      LIMIT 2`,
