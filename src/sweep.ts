@@ -111,13 +111,24 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
 
   const state = await loadState(db);
   const sameDay = state.captured_at === today;
-  const cursorIn = sameDay ? state.cursor : null;
-  const resumedFromCursor = sameDay && !!state.cursor;
-  const pagesDoneAtStart = sameDay ? state.pages_done : 0;
 
-  console.log(
-    `[sweep] start captured_at=${today} resuming=${resumedFromCursor} pages_done_today=${pagesDoneAtStart} same_day=${sameDay}`,
-  );
+  // If yesterday's sweep didn't finish (cursor still set), continue it
+  // using yesterday's date so those skills still get a snapshot for that day.
+  const hasUnfinishedPrior = !sameDay && !!state.cursor;
+  const effectiveDate = hasUnfinishedPrior ? state.captured_at! : today;
+  const cursorIn = (sameDay || hasUnfinishedPrior) ? state.cursor : null;
+  const resumedFromCursor = !!cursorIn;
+  const pagesDoneAtStart = (sameDay || hasUnfinishedPrior) ? state.pages_done : 0;
+
+  if (hasUnfinishedPrior) {
+    console.log(
+      `[sweep] RESUMING incomplete sweep from ${state.captured_at} (pages_done=${state.pages_done}) before starting ${today}`,
+    );
+  } else {
+    console.log(
+      `[sweep] start captured_at=${effectiveDate} resuming=${resumedFromCursor} pages_done_today=${pagesDoneAtStart} same_day=${sameDay}`,
+    );
+  }
 
   if (sameDay && !state.cursor && state.pages_done > 0) {
     console.log(`[sweep] already complete for ${today} — no-op`);
@@ -166,7 +177,7 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
             .bind(
               row.ownerHandle,
               row.skill.slug,
-              today,
+              effectiveDate,
               row.skill.stats.downloads,
               row.skill.stats.installsAllTime,
             ),
@@ -190,16 +201,16 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
       `[sweep] error after pages_this_run=${pagesThisRun} — persisting cursor and rethrowing`,
       err,
     );
-    await saveState(db, cursor, today, pagesDoneAtStart + pagesThisRun);
+    await saveState(db, cursor, effectiveDate, pagesDoneAtStart + pagesThisRun);
     throw err;
   }
 
   const pagesDoneTotal = pagesDoneAtStart + pagesThisRun;
-  await saveState(db, sawEnd ? null : cursor, today, pagesDoneTotal);
+  await saveState(db, sawEnd ? null : cursor, effectiveDate, pagesDoneTotal);
 
   const result: SweepResult = {
     started_at_utc: startedAtUtc,
-    captured_at: today,
+    captured_at: effectiveDate,
     resumed_from_cursor: resumedFromCursor,
     pages_this_run: pagesThisRun,
     skills_this_run: skillsThisRun,
