@@ -245,17 +245,16 @@ ${GA_TAG}
   pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
   footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
   footer a { color: #6b7280; }
-  .embed-section { position: relative; }
-  .embed-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-  .btn-small { font-size: 13px; padding: 4px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; line-height: 1.4; }
-  .btn-small:hover { background: #f9fafb; border-color: #9ca3af; }
+  .embed-row { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+  .btn-embed { font-size: 13px; padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; line-height: 1.4; display: inline-flex; align-items: center; }
+  .btn-embed:hover { background: #f9fafb; border-color: #9ca3af; }
   @media (prefers-color-scheme: dark) {
     body { color: #e5e7eb; background: #0f172a; }
     .meta, .subline, footer, footer a, .meta a { color: #9ca3af; }
     pre { background: #1e293b; }
     .chart { border-color: #334155; background: white; }
-    .btn-small { background: #1e293b; color: #e5e7eb; border-color: #475569; }
-    .btn-small:hover { background: #334155; border-color: #64748b; }
+    .btn-embed { background: #1e293b; color: #e5e7eb; border-color: #475569; }
+    .btn-embed:hover { background: #334155; border-color: #64748b; }
   }
 </style>
 </head>
@@ -269,20 +268,13 @@ ${GA_TAG}
   <div class="subline">${subline}</div>
 </section>
 <div class="chart"><img src="${svgUrl}" alt="ClawHub download history chart for ${skill.slug} by ${skill.handle}"></div>
-<h2>Embed this chart</h2>
-<div class="embed-section">
-  <div class="embed-actions">
-    <button id="copy-chart-btn" class="btn-small" onclick="copyChart()">Copy</button>
-  </div>
-  <pre id="embed-code">${embedEscaped}</pre>
-</div>
-<h2>Or use a compact badge</h2>
-<div class="embed-section">
-  <div style="margin-bottom:8px;"><img src="${badgeUrl}" alt="Downloads badge"></div>
-  <div class="embed-actions">
-    <button id="copy-badge-btn" class="btn-small" onclick="copyBadge()">Copy</button>
-  </div>
-  <pre id="badge-code">${badgeEscaped}</pre>
+<div class="embed-row">
+  <button id="copy-chart-btn" class="btn-embed" onclick="copyChart()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy chart embed
+  </button>
+  <button id="copy-badge-btn" class="btn-embed" onclick="copyBadge()">
+    <img src="${badgeUrl}" alt="badge" style="vertical-align:-4px;margin-right:4px;height:16px;">Copy badge embed
+  </button>
 </div>
 ${moreByAuthor && moreByAuthor.length > 0 ? `<h2>More by ${escapeXml(skill.handle)}</h2>
 <ul style="list-style:none;padding:0;margin:0;">
@@ -297,15 +289,17 @@ var badgeText = ${JSON.stringify(badgeMarkdown)};
 function copyChart() {
   navigator.clipboard.writeText(chartText).then(function() {
     var btn = document.getElementById("copy-chart-btn");
+    var orig = btn.innerHTML;
     btn.textContent = "Copied!";
-    setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+    setTimeout(function() { btn.innerHTML = orig; }, 2000);
   });
 }
 function copyBadge() {
   navigator.clipboard.writeText(badgeText).then(function() {
     var btn = document.getElementById("copy-badge-btn");
+    var orig = btn.innerHTML;
     btn.textContent = "Copied!";
-    setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+    setTimeout(function() { btn.innerHTML = orig; }, 2000);
   });
 }
 </script>
