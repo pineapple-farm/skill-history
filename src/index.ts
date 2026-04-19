@@ -36,7 +36,8 @@ app.get("/", async (c) => {
     )
     .join("");
 
-  // Trending: highest % growth over last 7 days, floor 100 downloads
+  // Trending: highest % growth, comparing latest snapshot vs oldest available
+  // (ideally 7 days back, falls back to whatever earliest we have)
   const trending = await c.env.DB.prepare(
     `SELECT s.handle, s.slug, s.display_name,
             latest.downloads AS dl_now,
@@ -47,11 +48,11 @@ app.get("/", async (c) => {
      FROM skills s
      JOIN snapshots latest ON latest.skill_id = s.id
        AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
-     LEFT JOIN snapshots older ON older.skill_id = s.id
-       AND older.captured_at = (SELECT MAX(captured_at) FROM snapshots WHERE captured_at <= date((SELECT MAX(captured_at) FROM snapshots), '-7 days'))
+     JOIN snapshots older ON older.skill_id = s.id
+       AND older.captured_at = (SELECT MIN(captured_at) FROM snapshots)
      WHERE latest.downloads >= 100
-       AND older.downloads IS NOT NULL
        AND older.downloads > 0
+       AND latest.downloads > older.downloads
      ORDER BY growth_pct DESC
      LIMIT 2`,
   ).all<{ handle: string; slug: string; display_name: string | null; growth_pct: number }>();
