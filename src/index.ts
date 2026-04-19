@@ -794,24 +794,22 @@ app.get("/:handle/:slug", async (c) => {
   if (wantsJson) {
     return c.json({ skill: data.skill, snapshots: data.snapshots });
   }
-  const moreByAuthorRows = await c.env.DB.prepare(
-    `SELECT s.slug, s.display_name, sn.downloads
-     FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
-     WHERE s.handle = ? AND s.slug != ?
-     AND sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
-     ORDER BY sn.downloads DESC LIMIT 3`,
-  )
-    .bind(handle, slug)
-    .all<{ slug: string; display_name: string | null; downloads: number }>();
+  // Fire both in parallel — neither blocks the other
+  const [moreByAuthorRows, hasGithub] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT s.slug, s.display_name, sn.downloads
+       FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
+       WHERE s.handle = ? AND s.slug != ?
+       AND sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+       ORDER BY sn.downloads DESC LIMIT 3`,
+    )
+      .bind(handle, slug)
+      .all<{ slug: string; display_name: string | null; downloads: number }>(),
+    fetch(`https://github.com/${handle}/${slug}`, { method: "HEAD", redirect: "follow" })
+      .then((r) => r.status === 200)
+      .catch(() => false),
+  ]);
   const moreByAuthor = moreByAuthorRows.results ?? [];
-  // Check if GitHub repo exists (HEAD request, fast at edge)
-  let hasGithub = false;
-  try {
-    const ghRes = await fetch(`https://github.com/${handle}/${slug}`, { method: "HEAD", redirect: "follow" });
-    hasGithub = ghRes.status === 200;
-  } catch {
-    hasGithub = false;
-  }
   const url = new URL(c.req.url);
   const origin = `${url.protocol}//${url.host}`;
   return c.html(renderChartPageHtml(data.skill, data.snapshots, origin, moreByAuthor, hasGithub));
