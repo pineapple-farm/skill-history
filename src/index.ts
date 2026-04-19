@@ -804,9 +804,17 @@ app.get("/:handle/:slug", async (c) => {
     .bind(handle, slug)
     .all<{ slug: string; display_name: string | null; downloads: number }>();
   const moreByAuthor = moreByAuthorRows.results ?? [];
+  // Check if GitHub repo exists (HEAD request, fast at edge)
+  let hasGithub = false;
+  try {
+    const ghRes = await fetch(`https://github.com/${handle}/${slug}`, { method: "HEAD", redirect: "follow" });
+    hasGithub = ghRes.status === 200;
+  } catch {
+    hasGithub = false;
+  }
   const url = new URL(c.req.url);
   const origin = `${url.protocol}//${url.host}`;
-  return c.html(renderChartPageHtml(data.skill, data.snapshots, origin, moreByAuthor));
+  return c.html(renderChartPageHtml(data.skill, data.snapshots, origin, moreByAuthor, hasGithub));
 });
 
 export default {
