@@ -245,8 +245,11 @@ ${GA_TAG}
   pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
   footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
   footer a { color: #6b7280; }
-  .embed-row { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
-  .btn-embed { font-size: 13px; padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; line-height: 1.4; display: inline-flex; align-items: center; }
+  .embed-row { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+  .embed-option { flex: 1; min-width: 280px; }
+  .embed-label { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .embed-code { font-size: 11px; padding: 8px; margin: 0; border-radius: 4px; max-height: 42px; overflow: hidden; word-break: break-all; line-height: 1.3; }
+  .btn-embed { font-size: 11px; padding: 2px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; }
   .btn-embed:hover { background: #f9fafb; border-color: #9ca3af; }
   @media (prefers-color-scheme: dark) {
     body { color: #e5e7eb; background: #0f172a; }
@@ -255,6 +258,7 @@ ${GA_TAG}
     .chart { border-color: #334155; background: white; }
     .btn-embed { background: #1e293b; color: #e5e7eb; border-color: #475569; }
     .btn-embed:hover { background: #334155; border-color: #64748b; }
+    .embed-label { color: #9ca3af; }
   }
 </style>
 </head>
@@ -269,12 +273,14 @@ ${GA_TAG}
 </section>
 <div class="chart"><img src="${svgUrl}" alt="ClawHub download history chart for ${skill.slug} by ${skill.handle}"></div>
 <div class="embed-row">
-  <button id="copy-chart-btn" class="btn-embed" onclick="copyChart()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy chart embed
-  </button>
-  <button id="copy-badge-btn" class="btn-embed" onclick="copyBadge()">
-    <img src="${badgeUrl}" alt="badge" style="vertical-align:-4px;margin-right:4px;height:16px;">Copy badge embed
-  </button>
+  <div class="embed-option">
+    <div class="embed-label">Chart embed <button id="copy-chart-btn" class="btn-embed" onclick="copyChart()">Copy</button></div>
+    <pre class="embed-code">${embedEscaped}</pre>
+  </div>
+  <div class="embed-option">
+    <div class="embed-label">Badge embed <button id="copy-badge-btn" class="btn-embed" onclick="copyBadge()">Copy</button> <img src="${badgeUrl}" alt="badge" style="vertical-align:-3px;margin-left:4px;height:16px;"></div>
+    <pre class="embed-code">${badgeEscaped}</pre>
+  </div>
 </div>
 ${moreByAuthor && moreByAuthor.length > 0 ? `<h2>More by ${escapeXml(skill.handle)}</h2>
 <ul style="list-style:none;padding:0;margin:0;">
