@@ -194,7 +194,6 @@ ${GA_TAG}
   <p class="tagline">Like star-history, but for ClawHub downloads. Track 54,000+ skills — free, no signup, no tokens.</p>
   <p style="color:#9ca3af;font-size:13px;margin:4px 0 0;">Starting with ClawHub. More skill registries coming.</p>
 </header>
-<div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:360px;border-radius:8px;width:100%;"></div>
 
 <section>
   <h2>How it works</h2>
@@ -239,6 +238,8 @@ ${trendingCards ? `<section>
   <h2>Trending on ClawHub</h2>
   ${trendingCards}
 </section>` : ""}
+
+<div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:360px;border-radius:8px;width:100%;"></div>
 
 <section>
   <h2>FAQ</h2>
