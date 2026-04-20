@@ -74,11 +74,11 @@ ${GA_TAG}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f97316'/><polyline points='6,22 12,18 18,14 26,8' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-<title>ClawHub Download Analytics — skill-history.com</title>
+<title>skill-history.com — download history for agent skills</title>
 <meta name="description" content="Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills. Embed a badge or history chart in your README in seconds.">
 <link rel="canonical" href="https://skill-history.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="ClawHub Download Analytics — skill-history.com">
+<meta property="og:title" content="skill-history.com — download history for agent skills">
 <meta property="og:description" content="Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills. Embed a badge or history chart in your README in seconds.">
 <meta property="og:url" content="https://skill-history.com/">
 <meta property="og:image" content="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg">
