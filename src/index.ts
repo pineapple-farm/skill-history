@@ -81,7 +81,7 @@ ${GA_TAG}
 <meta property="og:title" content="ClawHub Download Analytics — skill-history.com">
 <meta property="og:description" content="Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills. Embed a badge or history chart in your README in seconds.">
 <meta property="og:url" content="https://skill-history.com/">
-<meta property="og:image" content="https://skill-history.com/chart/gavinlinasd/self-preserve.svg">
+<meta property="og:image" content="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
 {
@@ -194,6 +194,7 @@ ${GA_TAG}
   <p class="tagline">Like star-history, but for ClawHub downloads. Track 54,000+ skills — free, no signup, no tokens.</p>
   <p style="color:#9ca3af;font-size:13px;margin:4px 0 0;">Starting with ClawHub. More skill registries coming.</p>
 </header>
+<div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:360px;border-radius:8px;width:100%;"></div>
 
 <section>
   <h2>How it works</h2>
