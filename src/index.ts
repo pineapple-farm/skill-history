@@ -81,7 +81,8 @@ ${GA_TAG}
 <meta property="og:title" content="ClawHub Download Analytics — skill-history.com">
 <meta property="og:description" content="Like star-history, but for ClawHub downloads. Free download tracking and charts for all 54,000+ ClawHub skills. Embed a badge or history chart in your README in seconds.">
 <meta property="og:url" content="https://skill-history.com/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://skill-history.com/chart/gavinlinasd/self-preserve.svg">
+<meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
