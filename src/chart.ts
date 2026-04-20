@@ -236,7 +236,7 @@ ${GA_TAG}
 <meta property="og:title" content="${skill.slug} downloads — ClawHub skill stats | skill-history.com">
 <meta property="og:description" content="Download history and stats for the ${skill.slug} ClawHub skill by ${skill.handle}. ${latest ? latest.downloads.toLocaleString() : '0'} total downloads, ${delta.d7 >= 0 ? '+' : ''}${delta.d7.toLocaleString()} in the last 7 days. Free embeddable chart and badge.">
 <meta property="og:url" content="https://skill-history.com/${skill.handle}/${skill.slug}">
-<meta property="og:image" content="https://skill-history.com/chart/${skill.handle}/${skill.slug}.svg">
+<meta property="og:image" content="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
 {
