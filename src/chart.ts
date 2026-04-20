@@ -13,8 +13,8 @@ export type SkillMeta = {
 };
 
 const W = 600;
-const H = 200;
-const PAD = { top: 24, right: 16, bottom: 40, left: 56 };
+const H = 300;
+const PAD = { top: 28, right: 16, bottom: 44, left: 56 };
 const CHART_W = W - PAD.left - PAD.right;
 const CHART_H = H - PAD.top - PAD.bottom;
 const LINE_COLOR = "#f97316";
