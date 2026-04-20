@@ -38,6 +38,24 @@ export function fmtNum(n: number): string {
   return n.toString();
 }
 
+function fmtAxisLabel(n: number, range: number): string {
+  // When the range is small relative to the values, fmtNum produces
+  // duplicate labels (e.g. all "2.4k"). Use higher precision instead.
+  if (range < 500 && n >= 1_000) {
+    // Full integers with comma separators: 2,386
+    return Math.round(n).toLocaleString("en-US");
+  }
+  if (range < 5_000 && n >= 1_000_000) {
+    // Two decimals for M: 1.23M
+    return (n / 1_000_000).toFixed(2) + "M";
+  }
+  if (range < 5_000 && n >= 1_000) {
+    // Two decimals for k: 2.39k
+    return (n / 1_000).toFixed(2) + "k";
+  }
+  return fmtNum(n);
+}
+
 const DARK_MODE_STYLE = `<style>
   @media (prefers-color-scheme: dark) {
     .bg { fill: #0f172a; }
@@ -107,7 +125,7 @@ export function renderChartSvg(
   const gridLines = [0, 0.25, 0.5, 0.75, 1]
     .map((f) => {
       const y = PAD.top + CHART_H - f * CHART_H;
-      const label = fmtNum(Math.round(yMin + (yMax - yMin) * f));
+      const label = fmtAxisLabel(Math.round(yMin + (yMax - yMin) * f), yMax - yMin);
       return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="1" stroke-dasharray="${f === 0 ? "0" : "2,2"}"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${label}</text>`;
     })
     .join("");
