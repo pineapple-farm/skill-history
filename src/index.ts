@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import puppeteer from "@cloudflare/puppeteer";
 import { runSweep } from "./sweep";
 import {
   renderChartPageHtml,
@@ -12,6 +13,7 @@ import {
 
 type Env = {
   DB: D1Database;
+  BROWSER: Fetcher;
 };
 
 const GA_TAG = `<script async src="https://www.googletagmanager.com/gtag/js?id=G-06QZRBETMR"></script>
@@ -780,6 +782,50 @@ app.get("/chart/:handle/:slugSvg", async (c) => {
       ? renderEmptySvg(skill)
       : renderChartSvg(skill, snapshots);
   return new Response(body, { status: 200, headers: SVG_HEADERS });
+});
+
+app.get("/og/:handle/:slugPng", async (c) => {
+  const handle = c.req.param("handle");
+  const slugPng = c.req.param("slugPng");
+  if (!slugPng.endsWith(".png")) return c.notFound();
+  const slug = slugPng.slice(0, -4);
+
+  // Check CF cache first
+  const cacheKey = new Request(`https://skill-history.com/og/${handle}/${slug}.png`);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
+  if (!data) {
+    // Return the default stonks meme for unknown skills
+    return c.redirect("https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg");
+  }
+
+  const svgContent = data.snapshots.length === 0
+    ? renderEmptySvg(data.skill)
+    : renderChartSvg(data.skill, data.snapshots);
+
+  const html = `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${svgContent}</body></html>`;
+
+  const browser = await puppeteer.launch(c.env.BROWSER);
+  const page = await browser.newPage();
+  await page.setViewport({ width: 600, height: 300 });
+  await page.setContent(html, { waitUntil: "networkidle0" });
+  const png = await page.screenshot({ type: "png" });
+  await browser.close();
+
+  const response = new Response(png, {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+    },
+  });
+
+  // Store in CF cache
+  c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+
+  return response;
 });
 
 app.get("/:handle/:slug", async (c) => {
