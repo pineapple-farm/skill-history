@@ -50,7 +50,7 @@ app.get("/", async (c) => {
        AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
      JOIN snapshots older ON older.skill_id = s.id
        AND older.captured_at = (SELECT MIN(captured_at) FROM snapshots)
-     WHERE older.downloads >= 100
+     WHERE older.downloads >= 1000
        AND latest.downloads > older.downloads
      ORDER BY growth_pct DESC
      LIMIT 2`,
@@ -155,7 +155,9 @@ ${GA_TAG}
   p, li { font-size: 15px; }
   code { background: #f3f4f6; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
   pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
-  .chart { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: white; margin: 16px 0; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .chart-grid { grid-template-columns: 1fr; } }
+  .chart { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: white; }
   .chart img { display: block; width: 100%; height: auto; }
   .chart a { display: block; }
   .input-section { margin: 32px 0; }
@@ -196,6 +198,16 @@ ${GA_TAG}
 </header>
 
 <section>
+  <h2>Featured Skills</h2>
+  <div class="chart-grid">${featuredCards}</div>
+</section>
+
+${trendingCards ? `<section>
+  <h2>Trending on ClawHub</h2>
+  <div class="chart-grid">${trendingCards}</div>
+</section>` : ""}
+
+<section>
   <h2>How it works</h2>
   <div class="mapping">
     <p>Your ClawHub skill at <code>clawhub.ai/{handle}/{slug}</code> maps to:</p>
@@ -228,16 +240,6 @@ ${GA_TAG}
     </div>
   </div>
 </section>
-
-<section>
-  <h2>Featured Skills</h2>
-  ${featuredCards}
-</section>
-
-${trendingCards ? `<section>
-  <h2>Trending on ClawHub</h2>
-  ${trendingCards}
-</section>` : ""}
 
 <div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:360px;border-radius:8px;width:100%;"></div>
 
