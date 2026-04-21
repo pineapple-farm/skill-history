@@ -149,17 +149,16 @@ ${GA_TAG}
 </script>
 <style>
   :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 960px; margin: 40px auto; padding: 0 24px; color: #111827; line-height: 1.5; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111827; line-height: 1.5; }
   h1 { margin: 0 0 4px; font-size: 28px; }
   .tagline { color: #6b7280; font-size: 16px; margin: 0 0 32px; }
   h2 { font-size: 18px; margin: 36px 0 12px; }
   h3 { font-size: 15px; margin: 24px 0 8px; }
   p, li { font-size: 15px; }
-  .content-narrow { max-width: 720px; }
   code { background: #f3f4f6; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
   pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 700px) { .chart-grid { grid-template-columns: 1fr; } }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .chart-grid { grid-template-columns: 1fr; } }
   .chart { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: white; }
   .chart img { display: block; width: 100%; height: auto; }
   .chart a { display: block; }
@@ -210,7 +209,7 @@ ${trendingCards ? `<section>
   <div class="chart-grid">${trendingCards}</div>
 </section>` : ""}
 
-<section class="content-narrow">
+<section>
   <h2>How it works</h2>
   <div class="mapping">
     <p>Your ClawHub skill at <code>clawhub.ai/{handle}/{slug}</code> maps to:</p>
@@ -220,7 +219,7 @@ ${trendingCards ? `<section>
   </div>
 </section>
 
-<section class="input-section content-narrow">
+<section class="input-section">
   <h2>Generate your links</h2>
   <p>Paste a ClawHub URL, GitHub URL, or <code>handle/slug</code>:</p>
   <div class="input-row">
