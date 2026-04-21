@@ -174,8 +174,6 @@ ${GA_TAG}
   #link-output a { color: #f97316; text-decoration: none; }
   #link-output a:hover { text-decoration: underline; }
   #link-error { color: #ef4444; font-size: 14px; margin-top: 8px; display: none; }
-  .mapping { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
-  .mapping p { margin: 6px 0; font-size: 14px; }
   .arrow { color: #9ca3af; margin: 0 4px; }
   footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
   footer a { color: #6b7280; }
@@ -185,7 +183,6 @@ ${GA_TAG}
     code { background: #1e293b; }
     pre { background: #1e293b; }
     .chart { border-color: #334155; background: white; }
-    .mapping { background: #1e293b; border-color: #334155; }
     .input-row input { background: #1e293b; border-color: #334155; color: #e5e7eb; }
     #link-output label { color: #9ca3af; }
     #link-error { color: #f87171; }
@@ -209,32 +206,18 @@ ${trendingCards ? `<section>
   <div class="chart-grid">${trendingCards}</div>
 </section>` : ""}
 
-<section>
-  <h2>How it works</h2>
-  <div class="mapping">
-    <p>Your ClawHub skill at <code>clawhub.ai/{handle}/{slug}</code> maps to:</p>
-    <p><code>skill-history.com/{handle}/{slug}</code></p>
-    <p style="margin-top:12px"><code>{handle}</code> is your GitHub username (ClawHub uses GitHub OAuth).</p>
-    <p>So if your GitHub repo is <code>github.com/alice/my-skill</code> and it&rsquo;s published on ClawHub, your chart is at <code>skill-history.com/alice/my-skill</code>.</p>
-  </div>
-</section>
-
 <section class="input-section">
-  <h2>Generate your links</h2>
-  <p>Paste a ClawHub URL, GitHub URL, or <code>handle/slug</code>:</p>
+  <h2>Find your skill</h2>
+  <p>Paste a ClawHub URL, GitHub URL, or <code>handle/slug</code> to get your chart and embed code.</p>
   <div class="input-row">
     <input type="text" id="skill-input" placeholder="clawhub.ai/gavinlinasd/self-preserve" autocomplete="off">
-    <button onclick="generateLinks()">Generate</button>
+    <button onclick="generateLinks()">Go</button>
   </div>
   <div id="link-error"></div>
   <div id="link-output">
     <div class="result-block">
       <label>Chart page</label>
       <pre><a id="out-page" href="#" target="_blank"></a></pre>
-    </div>
-    <div class="result-block">
-      <label>SVG embed URL</label>
-      <pre><a id="out-svg" href="#" target="_blank"></a></pre>
     </div>
     <div class="result-block">
       <label>Markdown embed</label>
@@ -253,6 +236,8 @@ ${trendingCards ? `<section>
   <p>Star-history tracks GitHub stars, which have timestamps &mdash; so they can reconstruct a full history back to day one. ClawHub downloads don&rsquo;t have timestamps, so we can only track from the day we started polling. Think of it as: star-history looks backward, skill-history looks forward.</p>
   <h3>Will my chart keep updating?</h3>
   <p>Yes. We poll every skill on ClawHub multiple times per day and store a daily snapshot. Your chart updates automatically &mdash; no setup, no tokens, no maintenance on your end.</p>
+  <h3>How do I find my skill?</h3>
+  <p>Your ClawHub skill at <code>clawhub.ai/{handle}/{slug}</code> maps directly to <code>skill-history.com/{handle}/{slug}</code>. Your <code>{handle}</code> is your GitHub username (ClawHub uses GitHub OAuth). Or just paste your ClawHub or GitHub URL in the search box above.</p>
   <h3>My skill isn&rsquo;t showing up?</h3>
   <p>We track all 54,000+ skills on ClawHub. If your skill was recently published, it should appear within a few hours. If it still doesn&rsquo;t show, <a href="https://github.com/pineapple-farm/skill-history/issues/new">open an issue</a>.</p>
   <h3>Will you track skills from other registries?</h3>
