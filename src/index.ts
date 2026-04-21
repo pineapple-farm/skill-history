@@ -25,8 +25,6 @@ app.get("/", async (c) => {
   const featured = [
     { handle: "gavinlinasd", slug: "self-preserve" },
     { handle: "aeoess", slug: "agent-passport-system" },
-    { handle: "othmanadi", slug: "planning-with-files" },
-    { handle: "robbyczgw-cla", slug: "roundtable" },
   ];
 
   const featuredCards = featured
