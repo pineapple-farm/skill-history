@@ -226,8 +226,6 @@ ${trendingCards ? `<section>
   </div>
 </section>
 
-<div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:360px;border-radius:8px;width:100%;"></div>
-
 <section>
   <h2>FAQ</h2>
   <h3>Why does data only start from April 2026?</h3>
@@ -243,6 +241,8 @@ ${trendingCards ? `<section>
   <h3>Will you track skills from other registries?</h3>
   <p>Yes &mdash; skill-history is built to be registry-agnostic. ClawHub is the starting point since it&rsquo;s where the agent skill ecosystem is most concentrated today. Support for additional registries is on the roadmap.</p>
 </section>
+
+<div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:300px;border-radius:8px;width:100%;"></div>
 
 <footer>
   Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
@@ -284,8 +284,6 @@ function generateLinks() {
 
   document.getElementById('out-page').href = pageUrl;
   document.getElementById('out-page').textContent = pageUrl;
-  document.getElementById('out-svg').href = svgUrl;
-  document.getElementById('out-svg').textContent = svgUrl;
   document.getElementById('out-md').textContent = md;
   outputEl.style.display = 'block';
 }
