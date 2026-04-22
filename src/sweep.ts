@@ -109,6 +109,12 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
   const startedAtUtc = new Date(started).toISOString();
   const today = startedAtUtc.slice(0, 10);
 
+  // Observability: log estimated catalog size for capacity planning.
+  // ~57K skills at 200/page = 285 pages. MAX_PAGES_PER_RUN(48) × 12 cron fires = 576 > 285.
+  const countRow = await db.prepare("SELECT COUNT(*) AS cnt FROM skills").first<{ cnt: number }>();
+  const estimatedPages = countRow ? Math.ceil(countRow.cnt / PAGE_SIZE) : "unknown";
+  console.log(`[sweep] catalog estimate: ${countRow?.cnt ?? "?"} skills, ~${estimatedPages} pages (max_pages_per_run=${MAX_PAGES_PER_RUN})`);
+
   const state = await loadState(db);
   const sameDay = state.captured_at === today;
   const cursorIn = sameDay ? state.cursor : null;

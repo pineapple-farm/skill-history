@@ -21,6 +21,22 @@ const GA_TAG = `<script async src="https://www.googletagmanager.com/gtag/js?id=G
 
 const app = new Hono<{ Bindings: Env }>();
 
+// In-memory TTL cache for GitHub repo existence checks.
+// Workers in-memory cache resets per isolate — best-effort, good enough for launch.
+const githubCache = new Map<string, { exists: boolean; ts: number }>();
+const GITHUB_CACHE_TTL = 3600000; // 1 hour
+
+function getCachedGithubExists(handle: string, slug: string): boolean | null {
+  const key = `${handle}/${slug}`;
+  const entry = githubCache.get(key);
+  if (entry && Date.now() - entry.ts < GITHUB_CACHE_TTL) return entry.exists;
+  return null;
+}
+
+function setCachedGithubExists(handle: string, slug: string, exists: boolean): void {
+  githubCache.set(`${handle}/${slug}`, { exists, ts: Date.now() });
+}
+
 app.get("/", async (c) => {
   const featured = [
     { handle: "gavinlinasd", slug: "self-preserve" },
@@ -40,25 +56,31 @@ app.get("/", async (c) => {
 
   // Trending: highest % growth, comparing latest snapshot vs oldest available
   // (ideally 7 days back, falls back to whatever earliest we have)
-  const trending = await c.env.DB.prepare(
-    `SELECT s.handle, s.slug, s.display_name,
-            latest.downloads AS dl_now,
-            older.downloads AS dl_then,
-            CASE WHEN older.downloads > 0
-              THEN ROUND((latest.downloads - older.downloads) * 100.0 / older.downloads, 1)
-              ELSE 0 END AS growth_pct
-     FROM skills s
-     JOIN snapshots latest ON latest.skill_id = s.id
-       AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
-     JOIN snapshots older ON older.skill_id = s.id
-       AND older.captured_at = (SELECT MIN(captured_at) FROM snapshots)
-     WHERE older.downloads >= 1000
-       AND latest.downloads > older.downloads
-     ORDER BY growth_pct DESC
-     LIMIT 2`,
-  ).all<{ handle: string; slug: string; display_name: string | null; growth_pct: number }>();
+  let trendingResults: Array<{ handle: string; slug: string; display_name: string | null; growth_pct: number }> = [];
+  try {
+    const trending = await c.env.DB.prepare(
+      `SELECT s.handle, s.slug, s.display_name,
+              latest.downloads AS dl_now,
+              older.downloads AS dl_then,
+              CASE WHEN older.downloads > 0
+                THEN ROUND((latest.downloads - older.downloads) * 100.0 / older.downloads, 1)
+                ELSE 0 END AS growth_pct
+       FROM skills s
+       JOIN snapshots latest ON latest.skill_id = s.id
+         AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+       JOIN snapshots older ON older.skill_id = s.id
+         AND older.captured_at = (SELECT MIN(captured_at) FROM snapshots)
+       WHERE older.downloads >= 1000
+         AND latest.downloads > older.downloads
+       ORDER BY growth_pct DESC
+       LIMIT 2`,
+    ).all<{ handle: string; slug: string; display_name: string | null; growth_pct: number }>();
+    trendingResults = trending.results ?? [];
+  } catch (err) {
+    console.error("[homepage] trending query failed, skipping section", err);
+  }
 
-  const trendingCards = (trending.results ?? [])
+  const trendingCards = trendingResults
     .map(
       (e) => `
       <div class="chart">
@@ -69,6 +91,7 @@ app.get("/", async (c) => {
     )
     .join("");
 
+  c.header("Cache-Control", "public, max-age=300, s-maxage=300");
   return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -702,7 +725,7 @@ async function loadSkillAndSnapshots(
 
 const SVG_HEADERS = {
   "Content-Type": "image/svg+xml; charset=utf-8",
-  "Cache-Control": "public, max-age=60, s-maxage=60",
+  "Cache-Control": "public, max-age=300, s-maxage=300",
   "Access-Control-Allow-Origin": "*",
 };
 
@@ -773,80 +796,113 @@ app.get("/og/:handle/:slugPng", async (c) => {
   if (!slugPng.endsWith(".png")) return c.notFound();
   const slug = slugPng.slice(0, -4);
 
-  // Check CF cache first
-  const cacheKey = new Request(`https://skill-history.com/og/${handle}/${slug}.png`);
-  const cache = caches.default;
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+  const STONKS_FALLBACK = "https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg";
 
-  const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
-  if (!data) {
-    // Return the default stonks meme for unknown skills
-    return c.redirect("https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg");
+  try {
+    // Check CF cache first
+    const cacheKey = new Request(`https://skill-history.com/og/${handle}/${slug}.png`);
+    const cache = caches.default;
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
+    if (!data) {
+      // Return the default stonks meme for unknown skills
+      return c.redirect(STONKS_FALLBACK);
+    }
+
+    const svgContent = data.snapshots.length === 0
+      ? renderEmptySvg(data.skill)
+      : renderChartSvg(data.skill, data.snapshots);
+
+    const html = `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${svgContent}</body></html>`;
+
+    const browser = await puppeteer.launch(c.env.BROWSER);
+    const page = await browser.newPage();
+    await page.setViewport({ width: 600, height: 300 });
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const png = await page.screenshot({ type: "png" });
+    await browser.close();
+
+    const response = new Response(png, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      },
+    });
+
+    // Store in CF cache
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+
+    return response;
+  } catch (err) {
+    console.error(`[og] error generating OG image for ${handle}/${slug}`, err);
+    return c.redirect(STONKS_FALLBACK);
   }
-
-  const svgContent = data.snapshots.length === 0
-    ? renderEmptySvg(data.skill)
-    : renderChartSvg(data.skill, data.snapshots);
-
-  const html = `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${svgContent}</body></html>`;
-
-  const browser = await puppeteer.launch(c.env.BROWSER);
-  const page = await browser.newPage();
-  await page.setViewport({ width: 600, height: 300 });
-  await page.setContent(html, { waitUntil: "networkidle0" });
-  const png = await page.screenshot({ type: "png" });
-  await browser.close();
-
-  const response = new Response(png, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=86400, s-maxage=86400",
-    },
-  });
-
-  // Store in CF cache
-  c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
-
-  return response;
 });
 
 app.get("/:handle/:slug", async (c) => {
   const { handle, slug } = c.req.param();
-  const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
-  const wantsJson =
-    c.req.header("accept")?.includes("application/json") ?? false;
-  if (!data) {
-    if (wantsJson) {
-      return c.json({ error: "skill not tracked", handle, slug }, 404);
+
+  try {
+    const data = await loadSkillAndSnapshots(c.env.DB, handle, slug);
+    const wantsJson =
+      c.req.header("accept")?.includes("application/json") ?? false;
+    if (!data) {
+      if (wantsJson) {
+        return c.json({ error: "skill not tracked", handle, slug }, 404);
+      }
+      return c.html(
+        `<!DOCTYPE html><meta charset="utf-8"><title>Not found — skill-history.com</title><body style="font-family:system-ui;max-width:640px;margin:40px auto;padding:0 16px"><h1>Skill not tracked</h1><p><code>${handle}/${slug}</code> isn't in our index. If this skill exists on ClawHub, it should appear within 6 hours.</p></body>`,
+        404,
+      );
     }
+    if (wantsJson) {
+      return c.json({ skill: data.skill, snapshots: data.snapshots });
+    }
+
+    // Check GitHub existence from cache first
+    let hasGithubPromise: Promise<boolean>;
+    const cachedGithub = getCachedGithubExists(handle, slug);
+    if (cachedGithub !== null) {
+      hasGithubPromise = Promise.resolve(cachedGithub);
+    } else {
+      hasGithubPromise = fetch(`https://github.com/${handle}/${slug}`, { method: "HEAD", redirect: "follow" })
+        .then((r) => {
+          const exists = r.status === 200;
+          setCachedGithubExists(handle, slug, exists);
+          return exists;
+        })
+        .catch(() => {
+          setCachedGithubExists(handle, slug, false);
+          return false;
+        });
+    }
+
+    // Fire both in parallel — neither blocks the other
+    const [moreByAuthorRows, hasGithub] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT s.slug, s.display_name, sn.downloads
+         FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
+         WHERE s.handle = ? AND s.slug != ?
+         AND sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+         ORDER BY sn.downloads DESC LIMIT 3`,
+      )
+        .bind(handle, slug)
+        .all<{ slug: string; display_name: string | null; downloads: number }>(),
+      hasGithubPromise,
+    ]);
+    const moreByAuthor = moreByAuthorRows.results ?? [];
+    const url = new URL(c.req.url);
+    const origin = `${url.protocol}//${url.host}`;
+    return c.html(renderChartPageHtml(data.skill, data.snapshots, origin, moreByAuthor, hasGithub));
+  } catch (err) {
+    console.error(`[skill-page] error for ${handle}/${slug}`, err);
     return c.html(
-      `<!DOCTYPE html><meta charset="utf-8"><title>Not found — skill-history.com</title><body style="font-family:system-ui;max-width:640px;margin:40px auto;padding:0 16px"><h1>Skill not tracked</h1><p><code>${handle}/${slug}</code> isn't in our index. If this skill exists on ClawHub, it should appear within 6 hours.</p></body>`,
-      404,
+      `<!DOCTYPE html><meta charset="utf-8"><title>Error — skill-history.com</title><body style="font-family:system-ui;max-width:640px;margin:40px auto;padding:0 16px"><h1>Something went wrong</h1><p>Try again later.</p></body>`,
+      500,
     );
   }
-  if (wantsJson) {
-    return c.json({ skill: data.skill, snapshots: data.snapshots });
-  }
-  // Fire both in parallel — neither blocks the other
-  const [moreByAuthorRows, hasGithub] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT s.slug, s.display_name, sn.downloads
-       FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
-       WHERE s.handle = ? AND s.slug != ?
-       AND sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
-       ORDER BY sn.downloads DESC LIMIT 3`,
-    )
-      .bind(handle, slug)
-      .all<{ slug: string; display_name: string | null; downloads: number }>(),
-    fetch(`https://github.com/${handle}/${slug}`, { method: "HEAD", redirect: "follow" })
-      .then((r) => r.status === 200)
-      .catch(() => false),
-  ]);
-  const moreByAuthor = moreByAuthorRows.results ?? [];
-  const url = new URL(c.req.url);
-  const origin = `${url.protocol}//${url.host}`;
-  return c.html(renderChartPageHtml(data.skill, data.snapshots, origin, moreByAuthor, hasGithub));
 });
 
 export default {
