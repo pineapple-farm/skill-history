@@ -307,7 +307,7 @@ ${moreByAuthor && moreByAuthor.length > 0 ? `<h2>More by ${escapeXml(skill.handl
 ${moreByAuthor.map(s => `  <li style="margin:6px 0;"><a href="/${escapeXml(skill.handle)}/${escapeXml(s.slug)}" style="color:#f97316;text-decoration:none;">${escapeXml(s.display_name || s.slug)}</a> <span style="color:#6b7280;font-size:13px;">&mdash; ${fmtNum(s.downloads)} downloads</span></li>`).join("\n")}
 </ul>` : ""}
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="/faq">FAQ</a> · <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> · <a href="https://github.com/pineapple-farm/skill-history">Source</a> · <a href="https://clawhub.ai">ClawHub</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> · <a href="/faq">FAQ</a> · <a href="https://gavinpineapple.substack.com/p/i-built-skill-historycom-the-missing">Blog</a> · <a href="https://github.com/pineapple-farm/skill-history">Source</a> · <a href="https://clawhub.ai">ClawHub</a>
 </footer>
 <script>
 var chartText = ${JSON.stringify(embedMarkdown)};

@@ -220,6 +220,10 @@ ${GA_TAG}
   <p style="color:#9ca3af;font-size:13px;margin:4px 0 0;">Starting with ClawHub. More skill registries coming.</p>
 </header>
 
+<div style="margin:24px 0;padding:12px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:14px;">
+  📣 <strong>Launch post:</strong> <a href="https://gavinpineapple.substack.com/p/i-built-skill-historycom-the-missing" style="color:#f97316;">I built skill-history.com — the missing download tracker for agent skills</a>
+</div>
+
 <section>
   <h2>Featured Skills</h2>
   <div class="chart-grid">${featuredCards}</div>
@@ -269,7 +273,7 @@ ${trendingCards ? `<section>
 <div style="text-align:center;margin:24px 0;"><img src="https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg" alt="Skills stonks" style="max-width:300px;border-radius:8px;width:100%;"></div>
 
 <footer>
-  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
+  Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/i-built-skill-historycom-the-missing">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
 </footer>
 
 <script>
@@ -436,7 +440,7 @@ ${GA_TAG}
 <p>Yes. The entire codebase is at <a href="https://github.com/pineapple-farm/skill-history">github.com/pineapple-farm/skill-history</a>. Feature requests, bug reports, and PRs are welcome.</p>
 
 <footer>
-  <a href="/">Home</a> &middot; Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/building-a-zero-human-company-for">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
+  <a href="/">Home</a> &middot; Built by <a href="https://pineappleai.com">Pineapple AI</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="https://gavinpineapple.substack.com/p/i-built-skill-historycom-the-missing">Blog</a> &middot; <a href="https://github.com/pineapple-farm/skill-history">Source</a> &middot; <a href="https://clawhub.ai">ClawHub</a>
 </footer>
 </body>
 </html>`);
