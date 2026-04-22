@@ -1,5 +1,5 @@
 const SKILLS_SH_API = "https://skills.sh/api/search";
-const MAX_PREFIXES_PER_RUN = 45; // 45 fetches, safely under 48 subrequest limit
+const MAX_PREFIXES_PER_RUN = 25; // skills.sh rate limit: 30 req/min, keep margin
 const TOTAL_PREFIXES = 676; // 26 * 26 = aa..zz
 
 type SkillsShSkill = {
