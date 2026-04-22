@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import puppeteer from "@cloudflare/puppeteer";
 import { runSweep } from "./sweep";
+import { runSkillsshSweep } from "./sweep-skillssh";
 import {
   renderChartPageHtml,
   renderChartSvg,
@@ -909,7 +910,13 @@ export default {
   fetch: app.fetch,
 
   async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
-    const result = await runSweep(env.DB);
-    console.log("sweep complete", result);
+    const hour = new Date().getUTCHours();
+    if (hour % 2 === 0) {
+      const result = await runSweep(env.DB);
+      console.log("clawhub sweep complete", result);
+    } else {
+      const result = await runSkillsshSweep(env.DB);
+      console.log("skillssh sweep complete", result);
+    }
   },
 } satisfies ExportedHandler<Env>;
