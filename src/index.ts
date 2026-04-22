@@ -909,9 +909,12 @@ app.get("/:handle/:slug", async (c) => {
 export default {
   fetch: app.fetch,
 
-  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
-    const hour = new Date().getUTCHours();
-    if (hour % 2 === 0) {
+  async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    // Two crons: "0 */2 * * *" (even hours) for ClawHub,
+    // "0 1-23/2 * * *" (odd hours) for skills.sh.
+    // Determine which by checking the scheduled time.
+    const scheduledHour = new Date(controller.scheduledTime).getUTCHours();
+    if (scheduledHour % 2 === 0) {
       const result = await runSweep(env.DB);
       console.log("clawhub sweep complete", result);
     } else {
