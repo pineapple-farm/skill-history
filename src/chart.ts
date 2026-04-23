@@ -270,6 +270,9 @@ ${GA_TAG}
   .embed-code { font-size: 11px; padding: 8px; margin: 0; border-radius: 4px; word-break: break-all; line-height: 1.3; white-space: pre-wrap; }
   .btn-embed { font-size: 11px; padding: 2px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; color: #374151; cursor: pointer; font-family: inherit; }
   .btn-embed:hover { background: #f9fafb; border-color: #9ca3af; }
+  .share-row { display: flex; gap: 8px; margin: 16px 0; }
+  .btn-action { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; text-decoration: none; font-family: inherit; cursor: pointer; }
+  .btn-action:hover { background: #f9fafb; border-color: #9ca3af; }
   @media (prefers-color-scheme: dark) {
     body { color: #e5e7eb; background: #0f172a; }
     .meta, .subline, footer, footer a, .meta a { color: #9ca3af; }
@@ -278,6 +281,8 @@ ${GA_TAG}
     .btn-embed { background: #1e293b; color: #e5e7eb; border-color: #475569; }
     .btn-embed:hover { background: #334155; border-color: #64748b; }
     .embed-label { color: #9ca3af; }
+    .btn-action { background: #1e293b; color: #e5e7eb; border-color: #475569; }
+    .btn-action:hover { background: #334155; border-color: #64748b; }
   }
 </style>
 </head>
@@ -301,6 +306,14 @@ ${GA_TAG}
     <div class="embed-label">Badge embed <button id="copy-badge-btn" class="btn-embed" onclick="copyBadge()">Copy</button> <img src="${badgeUrl}" alt="badge" style="vertical-align:-3px;margin-left:4px;height:16px;"></div>
     <pre class="embed-code">${badgeEscaped}</pre>
   </div>
+</div>
+<div class="share-row">
+  <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(`${skill.display_name ?? `${skill.handle}/${skill.slug}`} has ${latest ? latest.downloads.toLocaleString() : "0"} ClawHub downloads and growing 📈`)}&url=${encodeURIComponent(`${CANONICAL_ORIGIN}/${skill.handle}/${skill.slug}`)}" target="_blank" rel="noopener" class="btn-action">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> Share
+  </a>
+  <a href="/og/${skill.handle}/${skill.slug}.png" download="${skill.slug}-downloads.png" target="_blank" class="btn-action">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> PNG
+  </a>
 </div>
 ${moreByAuthor && moreByAuthor.length > 0 ? `<h2>More by ${escapeXml(skill.handle)}</h2>
 <ul style="list-style:none;padding:0;margin:0;">
