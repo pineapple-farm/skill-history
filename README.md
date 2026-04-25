@@ -91,3 +91,7 @@ MIT
 ## Download History
 
 [![Download History](https://skill-history.com/chart/sopaco/money-never-sleep.svg)](https://skill-history.com/sopaco/money-never-sleep)
+
+## Download History
+
+[![Download History](https://skill-history.com/chart/gongyu0918-debug/skill-usefulness-audit.svg)](https://skill-history.com/gongyu0918-debug/skill-usefulness-audit)
