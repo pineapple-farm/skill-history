@@ -87,3 +87,7 @@ This is a brand new project and we're actively shaping it based on what skill au
 ## License
 
 MIT
+
+## Download History
+
+[![Download History](https://skill-history.com/chart/sopaco/money-never-sleep.svg)](https://skill-history.com/sopaco/money-never-sleep)
