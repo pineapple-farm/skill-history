@@ -11,6 +11,8 @@ import {
   type Snapshot,
   type SkillMeta,
 } from "./chart";
+import { createMcpHandler } from "./mcp";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
 type Env = {
   DB: D1Database;
@@ -705,6 +707,40 @@ app.get("/api/openapi.json", (c) => {
     },
   };
   return c.json(spec);
+});
+
+app.get("/api/search", async (c) => {
+  const query = c.req.query("q") || "";
+  const limit = Math.min(parseInt(c.req.query("limit") || "10"), 50);
+
+  if (query.length < 2) {
+    return c.json({ query, results: [] });
+  }
+
+  const pattern = `%${query}%`;
+  const { results } = await c.env.DB.prepare(
+    `SELECT s.handle, s.slug, s.display_name, s.source,
+            (SELECT sn.downloads FROM snapshots sn WHERE sn.skill_id = s.id ORDER BY sn.captured_at DESC LIMIT 1) as downloads
+     FROM skills s
+     WHERE s.handle LIKE ? OR s.slug LIKE ? OR s.display_name LIKE ?
+     ORDER BY downloads DESC
+     LIMIT ?`
+  ).bind(pattern, pattern, pattern, limit)
+   .all<{ handle: string; slug: string; display_name: string | null; source: string; downloads: number | null }>();
+
+  return c.json({ query, results: results ?? [] }, 200, {
+    "Cache-Control": "public, max-age=60, s-maxage=60",
+  });
+});
+
+app.all("/mcp", async (c) => {
+  const server = createMcpHandler(c.env.DB);
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined, // stateless
+  });
+  await server.connect(transport);
+  const response = await transport.handleRequest(c.req.raw);
+  return response;
 });
 
 async function loadSkillAndSnapshots(

@@ -15,9 +15,11 @@
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.1.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/d3-shape": "^3.1.8",
     "d3-shape": "^3.2.0",
-    "hono": "^4.7.4"
+    "hono": "^4.7.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250410.0",
