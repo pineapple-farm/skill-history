@@ -220,6 +220,7 @@ ${GA_TAG}
   <h1>Download analytics for every ClawHub skill</h1>
   <p class="tagline">Like star-history, but for ClawHub downloads. Track 54,000+ skills — free, no signup, no tokens.</p>
   <p style="color:#9ca3af;font-size:13px;margin:4px 0 0;">Starting with ClawHub. More skill registries coming.</p>
+  <p style="color:#9ca3af;font-size:13px;margin:2px 0 0;">🔌 <a href="/llms.txt" style="color:#9ca3af;">MCP compatible</a> — connect your AI agent directly.</p>
 </header>
 
 <div style="margin:24px 0;padding:12px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:14px;">
