@@ -456,19 +456,21 @@ app.get("/robots.txt", (c) => {
 });
 
 app.get("/sitemap.xml", async (c) => {
-  // Curated: top 500 skills by downloads only. Full 54k sitemap risks
-  // thin-content demotion since most pages have <7 days of data.
-  // Expand once charts are data-rich.
+  // Top 5,000 skills by downloads. With 12+ days of data, charts are
+  // meaningful enough to index. Skills below top 5k have <200 downloads
+  // and less interesting charts — expand further as data matures.
   const { results } = await c.env.DB.prepare(
     `SELECT s.handle, s.slug FROM skills s
      JOIN snapshots sn ON sn.skill_id = s.id
      WHERE sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+     AND s.source = 'clawhub'
      ORDER BY sn.downloads DESC
-     LIMIT 500`,
+     LIMIT 5000`,
   ).all<{ handle: string; slug: string }>();
 
   const urls = [
     `  <url><loc>https://skill-history.com/</loc></url>`,
+    `  <url><loc>https://skill-history.com/faq</loc></url>`,
     ...results.map(
       (r) =>
         `  <url><loc>https://skill-history.com/${r.handle}/${r.slug}</loc></url>`,
