@@ -548,6 +548,40 @@ Markdown for README chart embed:
 Markdown for compact badge:
 [![Downloads](https://skill-history.com/badge/{handle}/{slug}.svg)](https://skill-history.com/{handle}/{slug})
 
+## MCP Server
+
+skill-history.com provides an MCP (Model Context Protocol) server for AI agents
+to query skill download data directly.
+
+Endpoint: https://skill-history.com/mcp
+Transport: Streamable HTTP (stateless, no auth required)
+
+### Setup
+
+Claude Code:
+  claude mcp add --transport http skill-history https://skill-history.com/mcp
+
+Cursor / other MCP clients:
+  { "mcpServers": { "skill-history": { "url": "https://skill-history.com/mcp" } } }
+
+### Available tools
+
+1. get_skill_downloads(handle, slug)
+   Returns skill metadata and all daily download snapshots.
+   Example: get_skill_downloads("gavinlinasd", "self-preserve")
+   Response: { skill: { handle, slug, display_name }, snapshots: [{ captured_at, downloads, installs_all_time }] }
+
+2. search_skills(query, limit?)
+   Search skills by name, slug, or author handle. Returns top results by downloads.
+   Example: search_skills("browser", 5)
+   Response: { query, results: [{ handle, slug, display_name, source, downloads }] }
+
+### Search API
+
+GET /api/search?q={query}&limit=10
+Same search as the MCP tool, available as a REST endpoint.
+Minimum 2 characters. Max 50 results. Cached 60s.
+
 ## About
 Built by Pineapple AI (https://pineappleai.com)
 Source: https://github.com/pineapple-farm/skill-history
