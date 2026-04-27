@@ -15,7 +15,7 @@ export function createMcpHandler(db: D1Database) {
       handle: z.string().describe("The skill author's handle (e.g. 'gavinlinasd')"),
       slug: z.string().describe("The skill slug (e.g. 'self-preserve')"),
     },
-    async ({ handle, slug }) => {
+    async ({ handle, slug }: { handle: string; slug: string }) => {
       const skill = await db
         .prepare("SELECT id, handle, slug, display_name FROM skills WHERE handle = ? AND slug = ?")
         .bind(handle, slug)
@@ -47,7 +47,7 @@ export function createMcpHandler(db: D1Database) {
       query: z.string().describe("Search query to match against skill names, slugs, and author handles"),
       limit: z.number().optional().default(10).describe("Maximum results (default 10, max 50)"),
     },
-    async ({ query, limit }) => {
+    async ({ query, limit }: { query: string; limit?: number }) => {
       const safeLimit = Math.min(limit ?? 10, 50);
       if (query.length < 2) {
         return { content: [{ type: "text" as const, text: JSON.stringify({ query, results: [] }) }] };
