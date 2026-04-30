@@ -466,17 +466,16 @@ app.get("/robots.txt", (c) => {
 });
 
 app.get("/sitemap.xml", async (c) => {
-  // Top 5,000 skills by downloads. With 12+ days of data, charts are
-  // meaningful enough to index. Skills below top 5k have <200 downloads
-  // and less interesting charts — expand further as data matures.
+  // All skills with 500+ downloads. This filters out spam (junk slugs
+  // never get real downloads) and thin content (low-download skills have
+  // less interesting charts). Currently ~13.6k skills qualify.
   const { results } = await c.env.DB.prepare(
     `SELECT s.handle, s.slug FROM skills s
      JOIN snapshots sn ON sn.skill_id = s.id
      WHERE sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
      AND s.source = 'clawhub'
-     AND LENGTH(s.slug) <= 80
-     ORDER BY sn.downloads DESC
-     LIMIT 5000`,
+     AND sn.downloads >= 500
+     ORDER BY sn.downloads DESC`,
   ).all<{ handle: string; slug: string }>();
 
   const urls = [
