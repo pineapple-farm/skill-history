@@ -474,6 +474,7 @@ app.get("/sitemap.xml", async (c) => {
      JOIN snapshots sn ON sn.skill_id = s.id
      WHERE sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
      AND s.source = 'clawhub'
+     AND LENGTH(s.slug) <= 80
      ORDER BY sn.downloads DESC
      LIMIT 5000`,
   ).all<{ handle: string; slug: string }>();
