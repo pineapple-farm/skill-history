@@ -481,6 +481,7 @@ app.get("/sitemap.xml", async (c) => {
   const urls = [
     `  <url><loc>https://skill-history.com/</loc></url>`,
     `  <url><loc>https://skill-history.com/faq</loc></url>`,
+    `  <url><loc>https://skill-history.com/gavinlinasd/self-preserve</loc></url>`,
     ...results.map(
       (r) =>
         `  <url><loc>https://skill-history.com/${r.handle}/${r.slug}</loc></url>`,
