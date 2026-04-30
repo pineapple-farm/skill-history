@@ -24,6 +24,16 @@ const GA_TAG = `<script async src="https://www.googletagmanager.com/gtag/js?id=G
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Redirect www → non-www to prevent duplicate content indexing
+app.use("*", async (c, next) => {
+  const url = new URL(c.req.url);
+  if (url.hostname === "www.skill-history.com") {
+    url.hostname = "skill-history.com";
+    return c.redirect(url.toString(), 301);
+  }
+  return next();
+});
+
 // In-memory TTL cache for GitHub repo existence checks.
 // Workers in-memory cache resets per isolate — best-effort, good enough for launch.
 const githubCache = new Map<string, { exists: boolean; ts: number }>();
