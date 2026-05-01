@@ -189,17 +189,7 @@ ${GA_TAG}
   .chart img { display: block; width: 100%; height: auto; }
   .chart a { display: block; }
   .input-section { margin: 32px 0; }
-  .input-row { display: flex; gap: 8px; }
-  .input-row input { flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; background: white; color: #111827; }
-  .input-row button { padding: 8px 16px; border: none; border-radius: 6px; background: #f97316; color: white; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
-  .input-row button:hover { background: #ea580c; }
-  #link-output { margin-top: 16px; display: none; }
-  #link-output .result-block { margin: 8px 0; }
-  #link-output label { font-size: 13px; font-weight: 600; color: #6b7280; display: block; margin-bottom: 4px; }
-  #link-output pre { margin: 0; }
-  #link-output a { color: #f97316; text-decoration: none; }
-  #link-output a:hover { text-decoration: underline; }
-  #link-error { color: #ef4444; font-size: 14px; margin-top: 8px; display: none; }
+  #search-results a:hover { background: #f9fafb; }
   .arrow { color: #9ca3af; margin: 0 4px; }
   footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
   footer a { color: #6b7280; }
@@ -209,9 +199,10 @@ ${GA_TAG}
     code { background: #1e293b; }
     pre { background: #1e293b; }
     .chart { border-color: #334155; background: white; }
-    .input-row input { background: #1e293b; border-color: #334155; color: #e5e7eb; }
-    #link-output label { color: #9ca3af; }
-    #link-error { color: #f87171; }
+    #skill-search { background: #1e293b; border-color: #334155; color: #e5e7eb; }
+    #search-results { background: #1e293b; border-color: #334155; }
+    #search-results a { color: #e5e7eb; border-bottom-color: #334155; }
+    #search-results a:hover { background: #334155; }
   }
 </style>
 </head>
@@ -238,21 +229,9 @@ ${trendingCards ? `<section>
 
 <section class="input-section">
   <h2>Find your skill</h2>
-  <p>Paste a ClawHub URL, GitHub URL, or <code>handle/slug</code> to get your chart and embed code.</p>
-  <div class="input-row">
-    <input type="text" id="skill-input" placeholder="clawhub.ai/gavinlinasd/self-preserve" autocomplete="off">
-    <button onclick="generateLinks()">Go</button>
-  </div>
-  <div id="link-error"></div>
-  <div id="link-output">
-    <div class="result-block">
-      <label>Chart page</label>
-      <pre><a id="out-page" href="#" target="_blank"></a></pre>
-    </div>
-    <div class="result-block">
-      <label>Markdown embed</label>
-      <pre id="out-md"></pre>
-    </div>
+  <div style="position:relative;">
+    <input type="text" id="skill-search" placeholder="Search 70,000+ skills..." autocomplete="off" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;background:white;color:#111827;box-sizing:border-box;">
+    <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #d1d5db;border-top:none;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-height:320px;overflow-y:auto;z-index:10;"></div>
   </div>
 </section>
 
@@ -279,47 +258,65 @@ ${trendingCards ? `<section>
 </footer>
 
 <script>
-function generateLinks() {
-  var raw = document.getElementById('skill-input').value.trim();
-  var errorEl = document.getElementById('link-error');
-  var outputEl = document.getElementById('link-output');
-  errorEl.style.display = 'none';
-  outputEl.style.display = 'none';
+var searchInput = document.getElementById('skill-search');
+var searchResults = document.getElementById('search-results');
+var debounceTimer;
 
-  if (!raw) {
-    errorEl.textContent = 'Please enter a skill identifier.';
-    errorEl.style.display = 'block';
+searchInput.addEventListener('input', function() {
+  clearTimeout(debounceTimer);
+  var q = searchInput.value.trim();
+  if (q.length < 2) {
+    searchResults.style.display = 'none';
     return;
   }
+  debounceTimer = setTimeout(function() {
+    fetch('/api/search?q=' + encodeURIComponent(q) + '&limit=8')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.results || data.results.length === 0) {
+          searchResults.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:14px;">No skills found</div>';
+          searchResults.style.display = 'block';
+          return;
+        }
+        searchResults.innerHTML = data.results.map(function(r) {
+          var dl = r.downloads >= 1000 ? (r.downloads / 1000).toFixed(1) + 'k' : (r.downloads || 0);
+          return '<a href="/' + r.handle + '/' + r.slug + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;text-decoration:none;color:#111827;border-bottom:1px solid #f3f4f6;">'
+            + '<div><strong style="font-size:14px;">' + (r.display_name || r.slug) + '</strong> <span style="color:#6b7280;font-size:13px;">' + r.handle + '/' + r.slug + '</span></div>'
+            + '<span style="color:#6b7280;font-size:13px;white-space:nowrap;margin-left:12px;">' + dl + ' dl</span>'
+            + '</a>';
+        }).join('');
+        searchResults.style.display = 'block';
+      })
+      .catch(function() {
+        searchResults.style.display = 'none';
+      });
+  }, 300);
+});
 
-  // Strip protocol and www
-  var cleaned = raw.replace(/^https?:\\/\\//, '').replace(/^www\\./, '');
-  // Strip known host prefixes
-  cleaned = cleaned.replace(/^clawhub\\.ai\\//, '').replace(/^github\\.com\\//, '');
-  // Strip trailing slashes
-  cleaned = cleaned.replace(/\\/+$/, '');
-
-  var parts = cleaned.split('/');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    errorEl.textContent = 'Could not parse. Expected format: handle/slug';
-    errorEl.style.display = 'block';
-    return;
+searchInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    var q = searchInput.value.trim();
+    // Check if it's a URL (contains clawhub.ai or github.com or has a slash)
+    if (q.includes('clawhub.ai/') || q.includes('github.com/')) {
+      var cleaned = q.replace(/^https?:\\/\\//, '').replace(/^www\\./, '');
+      cleaned = cleaned.replace(/^clawhub\\.ai\\//, '').replace(/^github\\.com\\//, '').replace(/\\/+$/, '');
+      var parts = cleaned.split('/');
+      if (parts.length === 2) {
+        window.location.href = '/' + parts[0] + '/' + parts[1];
+        return;
+      }
+    }
+    // Otherwise navigate to first result
+    var firstLink = searchResults.querySelector('a');
+    if (firstLink) window.location.href = firstLink.getAttribute('href');
   }
+});
 
-  var handle = parts[0];
-  var slug = parts[1];
-  var pageUrl = 'https://skill-history.com/' + handle + '/' + slug;
-  var svgUrl = 'https://skill-history.com/chart/' + handle + '/' + slug + '.svg';
-  var md = '[![Download history](' + svgUrl + ')](' + pageUrl + ')';
-
-  document.getElementById('out-page').href = pageUrl;
-  document.getElementById('out-page').textContent = pageUrl;
-  document.getElementById('out-md').textContent = md;
-  outputEl.style.display = 'block';
-}
-
-document.getElementById('skill-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') generateLinks();
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+    searchResults.style.display = 'none';
+  }
 });
 </script>
 </body>
