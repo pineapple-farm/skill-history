@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.pineapple-farm/skill-history",
+  "name": "io.github.gavinlinasd/skill-history",
   "title": "Skill History",
-  "description": "Track download history for 70,000+ agent skills across ClawHub and skills.sh. Search skills by name, author, or keyword. Get daily download snapshots and trends.",
+  "description": "Track download history for 70,000+ agent skills. Search and get daily snapshots.",
   "version": "1.0.0",
   "repository": {
     "url": "https://github.com/pineapple-farm/skill-history",
