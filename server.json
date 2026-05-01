@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.gavinlinasd/skill-history",
+  "name": "io.github.pineapple-farm/skill-history",
   "title": "Skill History",
   "description": "Track download history for 70,000+ agent skills. Search and get daily snapshots.",
   "version": "1.0.0",
