@@ -19,9 +19,11 @@ const CHART_W = W - PAD.left - PAD.right;
 const CHART_H = H - PAD.top - PAD.bottom;
 const LINE_COLOR = "#f97316";
 const AXIS_COLOR = "#d1d5db";
+const BORDER_AXIS_COLOR = "#111111";
 const TEXT_COLOR = "#374151";
-const MUTED_COLOR = "#6b7280";
+const MUTED_COLOR = "#111111";
 const ATTRIBUTION = "skill-history.com · Pineapple AI";
+const HAND_FONT = "xkcd";
 
 function escapeXml(s: string): string {
   return s
@@ -56,7 +58,20 @@ function fmtAxisLabel(n: number, range: number): string {
   return fmtNum(n);
 }
 
+function fmtDateDot(s: string): string {
+  return s.replace(/-/g, ".");
+}
+
+function fmtXTicksDate(s: string, includeYear: boolean): string {
+  const [y, m, d] = s.split("-");
+  return includeYear ? `${y}.${m}.${d}` : `${m}.${d}`;
+}
+
 const DARK_MODE_STYLE = `<style>
+  @font-face {
+    font-family: 'xkcd';
+    src: url('/xkcd-script.woff') format('woff');
+  }
   @media (prefers-color-scheme: dark) {
     .bg { fill: #0f172a; }
     .text-primary { fill: #e5e7eb; }
@@ -66,11 +81,11 @@ const DARK_MODE_STYLE = `<style>
 </style>`;
 
 function svgOpen(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${DARK_MODE_STYLE}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${HAND_FONT}">${DARK_MODE_STYLE}`;
 }
 
 function attributionText(): string {
-  return `<text class="text-muted" x="${W - 8}" y="${H - 8}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${ATTRIBUTION}</text>`;
+  return `<text class="text-muted" x="${W - 8}" y="${H}" text-anchor="end" font-size="11" fill="${MUTED_COLOR}">${ATTRIBUTION}</text>`;
 }
 
 export function renderEmptySvg(skill: SkillMeta): string {
@@ -117,8 +132,6 @@ export function renderChartSvg(
     y: yAt(s.downloads),
   }));
   const points = coords.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const firstDate = snapshots[0].captured_at;
-  const lastDate = snapshots[n - 1].captured_at;
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
   const lastDownloads = snapshots[n - 1].downloads;
 
@@ -126,7 +139,34 @@ export function renderChartSvg(
     .map((f) => {
       const y = PAD.top + CHART_H - f * CHART_H;
       const label = fmtAxisLabel(Math.round(yMin + (yMax - yMin) * f), yMax - yMin);
-      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="1" stroke-dasharray="${f === 0 ? "0" : "2,2"}"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${label}</text>`;
+      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="${f === 0 ? "1.4" : "1"}" stroke-dasharray="${f === 0 ? "0" : "2,2"}" filter="url(#xkcdify)"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="11" fill="${MUTED_COLOR}">${label}</text>`;
+    })
+    .join("");
+
+  const axisBorders = `
+    <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + CHART_H}" stroke="${BORDER_AXIS_COLOR}" stroke-width="2.1" filter="url(#xkcdify)"/>
+    <line x1="${PAD.left}" y1="${PAD.top + CHART_H}" x2="${W - PAD.right}" y2="${PAD.top + CHART_H}" stroke="${BORDER_AXIS_COLOR}" stroke-width="2.1" filter="url(#xkcdify)"/>
+  `;
+
+  // Auto-adjust x-axis label frequency based on available width and data size.
+  const maxTicksByWidth = Math.max(2, Math.floor(CHART_W / 95) + 1);
+  const desiredTickCount = n === 1 ? 1 : Math.min(n, maxTicksByWidth);
+  const rawTickIndices = Array.from({ length: desiredTickCount }, (_, i) =>
+    desiredTickCount === 1 ? 0 : Math.round((i / (desiredTickCount - 1)) * (n - 1)),
+  );
+  const tickIndices = [...new Set(rawTickIndices)].sort((a, b) => a - b);
+  const firstYear = snapshots[tickIndices[0]].captured_at.slice(0, 4);
+  const xTickLabels = tickIndices
+    .map((idx, i) => {
+      const x = xAt(idx);
+      const atStart = i === 0;
+      const atEnd = i === tickIndices.length - 1;
+      const anchor = atStart ? "start" : atEnd ? "end" : "middle";
+      const xPos = atStart ? PAD.left + 2 : atEnd ? W - PAD.right - 2 : x;
+      const year = snapshots[idx].captured_at.slice(0, 4);
+      const includeYear = atStart || year !== firstYear;
+      const d = fmtXTicksDate(snapshots[idx].captured_at, includeYear);
+      return `<text class="text-muted" x="${xPos.toFixed(1)}" y="${H - 20}" text-anchor="${anchor}" font-size="11" fill="${MUTED_COLOR}">${d}</text>`;
     })
     .join("");
 
@@ -151,28 +191,37 @@ export function renderChartSvg(
 
   const smoothLine =
     n >= 2
-      ? `<path d="${areaPath}" fill="url(#grad)" /><path d="${curvePath}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+      ? `<path d="${areaPath}" fill="url(#grad)" /><path d="${curvePath}" fill="none" stroke="${LINE_COLOR}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" filter="url(#xkcdify)"/>`
       : "";
   const dotRadius = n === 1 ? 4 : 2.5;
   const dots = coords
     .map(
       (p) =>
-        `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${dotRadius}" fill="${LINE_COLOR}"/>`,
+        `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${dotRadius}" fill="${LINE_COLOR}" filter="url(#xkcdify)"/>`,
     )
     .join("");
 
-  const gradient = `<defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${LINE_COLOR}" stop-opacity="0.15"/><stop offset="100%" stop-color="${LINE_COLOR}" stop-opacity="0.01"/></linearGradient></defs>`;
+  const defs = `<defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${LINE_COLOR}" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="${LINE_COLOR}" stop-opacity="0.01"/>
+    </linearGradient>
+    <filter id="xkcdify" filterUnits="userSpaceOnUse" x="-10" y="-10" width="${W + 20}" height="${H + 20}">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>`;
 
   return `${svgOpen()}
-  ${gradient}
+  ${defs}
   <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
-  <text class="text-muted" x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
+  <text class="text-primary" x="${PAD.left}" y="18" font-size="16" fill="${TEXT_COLOR}" font-weight="500">${title}</text>
+  <text class="text-muted" x="${W - PAD.right}" y="16" text-anchor="end" font-size="13" font-weight="400" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
   ${gridLines}
+  ${axisBorders}
   ${smoothLine}
   ${dots}
-  <text class="text-muted" x="${PAD.left}" y="${H - 16}" font-size="10" fill="${MUTED_COLOR}">${firstDate}</text>
-  <text class="text-muted" x="${W - PAD.right}" y="${H - 16}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${lastDate}</text>
+  ${xTickLabels}
   ${attributionText()}
 </svg>`;
 }
