@@ -13,6 +13,17 @@ import {
 } from "./chart";
 import { createMcpHandler } from "./mcp";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import {
+  getCompletedWeeks,
+  isCurrentWeek,
+  isValidWeekStart,
+  latestCompleteMonday,
+  loadWeeklyPostData,
+  renderBlogIndexHtml,
+  renderBlogOgHtml,
+  renderBlogPostNotFoundHtml,
+  renderWeeklyTrendingPostHtml,
+} from "./blog";
 
 type Env = {
   DB: D1Database;
@@ -236,6 +247,9 @@ ${GA_TAG}
 ${trendingCards ? `<section>
   <h2>Trending on ClawHub</h2>
   <div class="chart-grid">${trendingCards}</div>
+  <p style="color:#6b7280;font-size:13px;margin:12px 0 0;">
+    → <a href="/blog/trending-openclaw-skills-week-of-${latestCompleteMonday()}">See this week's full trending leaderboard</a>
+  </p>
 </section>` : ""}
 
 <section class="input-section">
@@ -476,10 +490,20 @@ app.get("/sitemap.xml", async (c) => {
      ORDER BY sn.downloads DESC`,
   ).all<{ handle: string; slug: string }>();
 
+  const blogWeeks = getCompletedWeeks();
+  const blogUrls = [
+    `  <url><loc>https://skill-history.com/blog</loc><priority>0.8</priority></url>`,
+    ...blogWeeks.map(
+      (monday) =>
+        `  <url><loc>https://skill-history.com/blog/trending-openclaw-skills-week-of-${monday}</loc><priority>0.7</priority></url>`,
+    ),
+  ];
+
   const urls = [
     `  <url><loc>https://skill-history.com/</loc></url>`,
     `  <url><loc>https://skill-history.com/faq</loc></url>`,
     `  <url><loc>https://skill-history.com/gavinlinasd/self-preserve</loc></url>`,
+    ...blogUrls,
     ...results.map(
       (r) =>
         `  <url><loc>https://skill-history.com/${r.handle}/${r.slug}</loc></url>`,
@@ -879,6 +903,55 @@ app.get("/chart/:handle/:slugSvg", async (c) => {
   return new Response(body, { status: 200, headers: SVG_HEADERS });
 });
 
+// /og/blog/:slug.png - OG image for blog posts (must come BEFORE /og/:handle/:slugPng catch-all)
+app.get("/og/blog/:slugPng", async (c) => {
+  const slugPng = c.req.param("slugPng");
+  if (!slugPng.endsWith(".png")) return c.notFound();
+  const slug = slugPng.slice(0, -4);
+
+  const STONKS_FALLBACK = "https://raw.githubusercontent.com/pineapple-farm/skill-history/main/public/og-image.jpg";
+
+  const m = slug.match(/^trending-openclaw-skills-week-of-(\d{4}-\d{2}-\d{2})$/);
+  if (!m) return c.redirect(STONKS_FALLBACK);
+  const monday = m[1];
+  if (!isValidWeekStart(monday)) return c.redirect(STONKS_FALLBACK);
+
+  try {
+    const cacheKey = new Request(`https://skill-history.com/og/blog/${slug}.png`);
+    const cache = caches.default;
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    const data = await loadWeeklyPostData(c.env.DB, monday);
+    if (!data) return c.redirect(STONKS_FALLBACK);
+
+    const html = renderBlogOgHtml(data);
+    const browser = await puppeteer.launch(c.env.BROWSER);
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1200, height: 630 });
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const png = await page.screenshot({ type: "png" });
+    await browser.close();
+
+    const isCurrent = isCurrentWeek(monday);
+    const cacheControl = isCurrent
+      ? "public, max-age=3600, s-maxage=3600"
+      : "public, max-age=2592000, s-maxage=2592000";
+
+    const response = new Response(png, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": cacheControl,
+      },
+    });
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
+  } catch (err) {
+    console.error(`[og/blog] error generating OG for ${slug}`, err);
+    return c.redirect(STONKS_FALLBACK);
+  }
+});
+
 app.get("/og/:handle/:slugPng", async (c) => {
   const handle = c.req.param("handle");
   const slugPng = c.req.param("slugPng");
@@ -928,6 +1001,37 @@ app.get("/og/:handle/:slugPng", async (c) => {
     console.error(`[og] error generating OG image for ${handle}/${slug}`, err);
     return c.redirect(STONKS_FALLBACK);
   }
+});
+
+// Blog index
+app.get("/blog", (c) => {
+  const html = renderBlogIndexHtml(GA_TAG);
+  c.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
+  return c.html(html);
+});
+
+// Blog post (currently only weekly trending posts)
+app.get("/blog/:slug", async (c) => {
+  const slug = c.req.param("slug");
+  const m = slug.match(/^trending-openclaw-skills-week-of-(\d{4}-\d{2}-\d{2})$/);
+  if (!m) {
+    return c.html(renderBlogPostNotFoundHtml(GA_TAG), 404);
+  }
+  const monday = m[1];
+  if (!isValidWeekStart(monday)) {
+    return c.html(renderBlogPostNotFoundHtml(GA_TAG), 404);
+  }
+  const data = await loadWeeklyPostData(c.env.DB, monday);
+  if (!data) {
+    return c.html(renderBlogPostNotFoundHtml(GA_TAG), 404);
+  }
+  const html = renderWeeklyTrendingPostHtml(data, GA_TAG);
+  // Past weeks: cache 7 days. Current week: cache 1 hour.
+  const cacheControl = data.inProgress
+    ? "public, max-age=3600, s-maxage=3600"
+    : "public, max-age=86400, s-maxage=604800";
+  c.header("Cache-Control", cacheControl);
+  return c.html(html);
 });
 
 app.get("/:handle/:slug", async (c) => {

@@ -87,6 +87,28 @@ body=$(curl -s -X POST "$BASE/mcp" \
   -d '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"search_skills","arguments":{"query":"browser","limit":3}}}')
 check "MCP search_skills" "$(echo "$body" | grep -q 'browser' && echo true)"
 
+# Blog
+status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/blog")
+check "Blog index returns 200" "$([ "$status" = "200" ] && echo true)"
+
+body=$(curl -s "$BASE/blog")
+check "Blog index lists posts" "$(echo "$body" | grep -q 'trending-openclaw-skills-week-of-' && echo true)"
+
+# Use a known good week (week of 2026-04-20 — first complete week of data)
+status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/blog/trending-openclaw-skills-week-of-2026-04-20")
+check "Blog weekly post returns 200" "$([ "$status" = "200" ] && echo true)"
+
+body=$(curl -s "$BASE/blog/trending-openclaw-skills-week-of-2026-04-20")
+check "Blog weekly post has trending content" "$(echo "$body" | grep -q 'Fastest Growing\|Hot New Skills' && echo true)"
+
+# Bad slug → 404
+status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/blog/not-a-real-post")
+check "Blog 404 for bad slug" "$([ "$status" = "404" ] && echo true)"
+
+# Sitemap mentions blog URLs
+body=$(curl -s "$BASE/sitemap.xml")
+check "Sitemap includes blog URLs" "$(echo "$body" | grep -q '/blog' && echo true)"
+
 echo
 echo "Results: $PASS passed, $FAIL failed out of $((PASS+FAIL)) tests"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
