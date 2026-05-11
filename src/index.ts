@@ -812,7 +812,9 @@ async function loadSkillAndSnapshots(
 
 const SVG_HEADERS = {
   "Content-Type": "image/svg+xml; charset=utf-8",
-  "Cache-Control": "public, max-age=300, s-maxage=300",
+  // Browser caches 5 min, CF edge caches 1 hour. Charts only update once/day after the sweep
+  // so this is safe. Massive offload from Worker for popular embedded badges.
+  "Cache-Control": "public, max-age=300, s-maxage=3600",
   "Access-Control-Allow-Origin": "*",
 };
 
