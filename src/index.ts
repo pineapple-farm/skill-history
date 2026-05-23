@@ -11,7 +11,7 @@ import {
   type Snapshot,
   type SkillMeta,
 } from "./chart";
-import { createMcpHandler } from "./mcp";
+import { createMcpHandler, MCP_TOOLS } from "./mcp";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import {
   getCompletedWeeks,
@@ -778,6 +778,109 @@ app.get("/api/openapi.json", (c) => {
   };
   return c.json(spec);
 });
+
+// ── Agent / MCP discovery manifests ──────────────────────────────────────
+// AI agents probe a handful of standard well-known paths to auto-discover a
+// service's MCP server and A2A "agent card". We serve all of them so agents
+// stop 404ing. The advertised tool list is sourced from MCP_TOOLS (src/mcp.ts)
+// so it can never drift from what the MCP server actually registers.
+
+const SERVICE_DESCRIPTION =
+  "Track and visualize ClawHub agent skill download history over time. Like star-history.com, but for agent skills.";
+
+// JSON manifests are static, public, and meant to be fetched cross-origin by
+// agents and registry crawlers — permissive CORS + a day of edge caching.
+const DISCOVERY_HEADERS = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Cache-Control": "public, max-age=3600, s-maxage=86400",
+};
+
+function discoveryJson(body: unknown): Response {
+  return new Response(JSON.stringify(body, null, 2), { headers: DISCOVERY_HEADERS });
+}
+
+// MCP Server Card — https://modelcontextprotocol.io server discovery (.well-known/mcp.json)
+function buildMcpCard(origin: string) {
+  return {
+    $schema: "https://modelcontextprotocol.io/schemas/server-card/v1.0",
+    version: "1.0.0",
+    protocolVersion: "2025-06-18",
+    serverInfo: {
+      name: "skill-history",
+      title: "Skill History",
+      version: "1.0.0",
+      description: SERVICE_DESCRIPTION,
+      homepage: origin,
+    },
+    description: SERVICE_DESCRIPTION,
+    documentationUrl: `${origin}/llms.txt`,
+    transport: {
+      type: "streamable-http",
+      url: `${origin}/mcp`,
+    },
+    capabilities: {
+      tools: true,
+      resources: false,
+      prompts: false,
+    },
+    tools: MCP_TOOLS.map((t) => ({ name: t.name, description: t.description })),
+  };
+}
+
+// A2A Agent Card — https://a2a-protocol.org agent discovery.
+// Capabilities/skills mirror the MCP tools; the service endpoint points at /mcp.
+function buildAgentCard(origin: string) {
+  return {
+    protocolVersion: "0.3.0",
+    name: "skill-history",
+    description: SERVICE_DESCRIPTION,
+    url: `${origin}/mcp`,
+    preferredTransport: "streamable-http",
+    provider: {
+      organization: "Pineapple AI",
+      url: "https://pineappleai.com",
+    },
+    version: "1.0.0",
+    documentationUrl: `${origin}/llms.txt`,
+    capabilities: {
+      streaming: false,
+      pushNotifications: false,
+    },
+    defaultInputModes: ["application/json"],
+    defaultOutputModes: ["application/json"],
+    skills: MCP_TOOLS.map((t) => ({
+      id: t.name,
+      name: t.title,
+      description: t.description,
+      tags: ["clawhub", "skills", "downloads", "analytics"],
+    })),
+  };
+}
+
+// MCP discovery
+app.get("/.well-known/mcp.json", (c) => {
+  const { origin } = new URL(c.req.url);
+  return discoveryJson(buildMcpCard(origin));
+});
+
+// A2A agent card — served at every path agents are observed probing
+const agentCardPaths = [
+  "/.well-known/agent-card.json",
+  "/agent-card.json",
+  "/agents/agent-card.json",
+  "/mcp/agent-card.json",
+  // A2A protocol descriptors (older / alternate well-known locations)
+  "/v1/agent.json",
+  "/a2a.json",
+];
+for (const path of agentCardPaths) {
+  app.get(path, (c) => {
+    const { origin } = new URL(c.req.url);
+    return discoveryJson(buildAgentCard(origin));
+  });
+}
 
 app.get("/api/search", async (c) => {
   const query = c.req.query("q") || "";

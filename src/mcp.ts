@@ -1,6 +1,27 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+/**
+ * Canonical list of MCP tools this server exposes. Single source of truth —
+ * reused by the tool registrations below AND by the agent/MCP discovery
+ * manifests in index.ts (.well-known/mcp.json, agent-card.json, etc.) so the
+ * advertised capabilities never drift from what's actually registered.
+ */
+export const MCP_TOOLS = [
+  {
+    name: "get_skill_downloads",
+    title: "Get Skill Downloads",
+    description:
+      "Get download history snapshots for a ClawHub skill. Returns skill metadata and daily download counts over time.",
+  },
+  {
+    name: "search_skills",
+    title: "Search Skills",
+    description:
+      "Search for ClawHub skills by name, slug, or author handle. Returns matching skills with their latest download counts.",
+  },
+] as const;
+
 export function createMcpHandler(db: D1Database) {
   const server = new McpServer({
     name: "skill-history",
@@ -9,11 +30,10 @@ export function createMcpHandler(db: D1Database) {
 
   // Tool 1: get_skill_downloads
   server.registerTool(
-    "get_skill_downloads",
+    MCP_TOOLS[0].name,
     {
-      title: "Get Skill Downloads",
-      description:
-        "Get download history snapshots for a ClawHub skill. Returns skill metadata and daily download counts over time.",
+      title: MCP_TOOLS[0].title,
+      description: MCP_TOOLS[0].description,
       inputSchema: {
         handle: z.string().describe("The skill author's handle (e.g. 'gavinlinasd')"),
         slug: z.string().describe("The skill slug (e.g. 'self-preserve')"),
@@ -96,11 +116,10 @@ export function createMcpHandler(db: D1Database) {
 
   // Tool 2: search_skills
   server.registerTool(
-    "search_skills",
+    MCP_TOOLS[1].name,
     {
-      title: "Search Skills",
-      description:
-        "Search for ClawHub skills by name, slug, or author handle. Returns matching skills with their latest download counts.",
+      title: MCP_TOOLS[1].title,
+      description: MCP_TOOLS[1].description,
       inputSchema: {
         query: z.string().describe("Search query to match against skill names, slugs, and author handles"),
         limit: z
