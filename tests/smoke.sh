@@ -116,6 +116,38 @@ check "X weekly-trends link redirects (302)" "$([ "$status" = "302" ] && echo tr
 loc=$(curl -s -o /dev/null -w "%{redirect_url}" "$BASE/x/weekly-trends")
 check "X weekly-trends redirect embeds UTM" "$(echo "$loc" | grep -q '/blog?utm_source=x&utm_medium=social&utm_campaign=weekly-trends' && echo true)"
 
+# ── Agent / MCP discovery manifests ──
+for path in \
+  "/.well-known/mcp.json" \
+  "/.well-known/agent-card.json" \
+  "/agent-card.json" \
+  "/agents/agent-card.json" \
+  "/mcp/agent-card.json" \
+  "/v1/agent.json" \
+  "/a2a.json"; do
+  status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$path")
+  check "Discovery $path returns 200" "$([ "$status" = "200" ] && echo true)"
+
+  ct=$(curl -s -o /dev/null -w "%{content_type}" "$BASE$path")
+  check "Discovery $path is JSON" "$(echo "$ct" | grep -q 'application/json' && echo true)"
+
+  acao=$(curl -s -D - -o /dev/null "$BASE$path" | grep -i 'access-control-allow-origin')
+  check "Discovery $path has CORS" "$(echo "$acao" | grep -q '\*' && echo true)"
+
+  body=$(curl -s "$BASE$path")
+  check "Discovery $path is valid JSON" "$(echo "$body" | python3 -c 'import sys,json; json.load(sys.stdin); print("true")' 2>/dev/null)"
+done
+
+# MCP card points at the /mcp endpoint and lists the registered tools
+body=$(curl -s "$BASE/.well-known/mcp.json")
+check "MCP card transport points to /mcp" "$(echo "$body" | python3 -c 'import sys,json; d=json.load(sys.stdin); print("true" if d["transport"]["url"].endswith("/mcp") else "false")' 2>/dev/null)"
+check "MCP card lists get_skill_downloads" "$(echo "$body" | python3 -c 'import sys,json; d=json.load(sys.stdin); print("true" if any(t["name"]=="get_skill_downloads" for t in d["tools"]) else "false")' 2>/dev/null)"
+
+# Agent card exposes skills mirroring the MCP tools
+body=$(curl -s "$BASE/.well-known/agent-card.json")
+check "Agent card names skill-history" "$(echo "$body" | python3 -c 'import sys,json; d=json.load(sys.stdin); print("true" if d["name"]=="skill-history" else "false")' 2>/dev/null)"
+check "Agent card lists search_skills skill" "$(echo "$body" | python3 -c 'import sys,json; d=json.load(sys.stdin); print("true" if any(s["id"]=="search_skills" for s in d["skills"]) else "false")' 2>/dev/null)"
+
 echo
 echo "Results: $PASS passed, $FAIL failed out of $((PASS+FAIL)) tests"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
