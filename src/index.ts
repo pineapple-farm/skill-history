@@ -12,6 +12,7 @@ import {
   type SkillMeta,
 } from "./chart";
 import { createMcpHandler } from "./mcp";
+import { logMcpUsage } from "./mcp-logging";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import {
   getCompletedWeeks,
@@ -28,6 +29,9 @@ import {
 type Env = {
   DB: D1Database;
   BROWSER: Fetcher;
+  // Optional: per-call MCP usage logging (see src/mcp-logging.ts). Absent in
+  // local dev unless configured; logging is skipped when undefined.
+  MCP_ANALYTICS?: AnalyticsEngineDataset;
 };
 
 const GA_TAG = `<script async src="https://www.googletagmanager.com/gtag/js?id=G-06QZRBETMR"></script>
@@ -804,6 +808,21 @@ app.get("/api/search", async (c) => {
 });
 
 app.all("/mcp", async (c) => {
+  // Record per-call usage without blocking the response. Clone the request so
+  // reading the JSON-RPC body here doesn't consume the stream the transport
+  // needs. POST carries the JSON-RPC payload; other methods have no body.
+  const analytics = c.env.MCP_ANALYTICS;
+  if (analytics && c.req.method === "POST") {
+    c.executionCtx.waitUntil(
+      logMcpUsage(
+        analytics,
+        c.req.raw.clone(),
+        c.req.header("user-agent") ?? "",
+        c.req.header("cf-connecting-ip"),
+      ),
+    );
+  }
+
   const server = createMcpHandler(c.env.DB);
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless

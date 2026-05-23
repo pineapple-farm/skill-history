@@ -19,6 +19,12 @@
     { "pattern": "skill-history.com", "custom_domain": true },
     { "pattern": "www.skill-history.com", "custom_domain": true }
   ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "MCP_ANALYTICS",
+      "dataset": "mcp_usage"
+    }
+  ],
   "triggers": {
     "crons": ["0 */2 * * *", "0 1-23/2 * * *"]
   },
