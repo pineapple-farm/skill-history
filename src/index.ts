@@ -1003,6 +1003,16 @@ app.get("/og/:handle/:slugPng", async (c) => {
   }
 });
 
+// Branded short link for the weekly X campaign. One stable URL reused every
+// week — fits X's char limit and preserves GA4 attribution by embedding UTM
+// params server-side before redirecting to the blog index.
+app.get("/x/weekly-trends", (c) => {
+  const target =
+    "https://skill-history.com/blog" +
+    "?utm_source=x&utm_medium=social&utm_campaign=weekly-trends";
+  return c.redirect(target, 302);
+});
+
 // Blog index
 app.get("/blog", (c) => {
   const html = renderBlogIndexHtml(GA_TAG);

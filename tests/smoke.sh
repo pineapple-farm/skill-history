@@ -109,6 +109,13 @@ check "Blog 404 for bad slug" "$([ "$status" = "404" ] && echo true)"
 body=$(curl -s "$BASE/sitemap.xml")
 check "Sitemap includes blog URLs" "$(echo "$body" | grep -q '/blog' && echo true)"
 
+# Branded X campaign short link → 302 redirect to /blog with UTM
+status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/x/weekly-trends")
+check "X weekly-trends link redirects (302)" "$([ "$status" = "302" ] && echo true)"
+
+loc=$(curl -s -o /dev/null -w "%{redirect_url}" "$BASE/x/weekly-trends")
+check "X weekly-trends redirect embeds UTM" "$(echo "$loc" | grep -q '/blog?utm_source=x&utm_medium=social&utm_campaign=weekly-trends' && echo true)"
+
 echo
 echo "Results: $PASS passed, $FAIL failed out of $((PASS+FAIL)) tests"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
