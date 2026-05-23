@@ -19,12 +19,6 @@ const PAD = { top: 28, right: 16, bottom: 44, left: 56 };
 const CHART_W = W - PAD.left - PAD.right;
 const CHART_H = H - PAD.top - PAD.bottom;
 const LINE_COLOR = "#f97316";
-const AXIS_COLOR = "#d1d5db";
-const BORDER_COLOR = "#111111";
-const TEXT_COLOR = "#374151";
-// Axis tick / label color. The dark-mode @media block overrides .text-muted,
-// so this near-black is the light-mode value (matches the locked xkcd design).
-const MUTED_COLOR = "#111111";
 
 function escapeXml(s: string): string {
   return s
@@ -63,7 +57,11 @@ function fmtAxisLabel(n: number, range: number): string {
 // SVG renders correctly when loaded as an <img> / in README embeds, where a
 // relative font URL has no base to resolve against.
 const FONT_FACE = `@font-face{font-family:'xkcd';src:url('data:font/woff;base64,${XKCD_FONT_WOFF_BASE64}') format('woff');}`;
-const SVG_STYLE = `<style>${FONT_FACE}text{letter-spacing:.4px}@media (prefers-color-scheme: dark){.bg{fill:#0f172a}.text-primary{fill:#e5e7eb}.text-muted{fill:#9ca3af}.grid{stroke:#334155}}</style>`;
+// All colors are driven by CSS classes (never inline fill/stroke on the
+// elements below), so light + dark switch together. Mixing an inline fill
+// with a class makes the inline value win in <img>/README renderers, which
+// left text invisible on dark backgrounds.
+const SVG_STYLE = `<style>${FONT_FACE}text{letter-spacing:.4px}.bg{fill:#fff}.text-primary{fill:#374151}.text-muted{fill:#6b7280}.grid{stroke:#d1d5db}.axis-border{stroke:#111}@media (prefers-color-scheme: dark){.bg{fill:#0f172a}.text-primary{fill:#e5e7eb}.text-muted{fill:#9ca3af}.grid{stroke:#334155}.axis-border{stroke:#cbd5e1}}</style>`;
 
 // Hand-drawn "xkcdify" wobble: applied to grid lines, axis borders, the curve
 // and the dots — never to <text>, which must stay legible.
@@ -80,18 +78,18 @@ function brandingText(): string {
 export function renderEmptySvg(skill: SkillMeta): string {
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
   return `${svgOpen()}
-  <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${title}</text>
-  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">tracking starts on next sweep</text>
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14">${title}</text>
+  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12">tracking starts on next sweep</text>
   ${brandingText()}
 </svg>`;
 }
 
 export function renderNotFoundSvg(handle: string, slug: string): string {
   return `${svgOpen()}
-  <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${escapeXml(handle)}/${escapeXml(slug)}</text>
-  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">skill not found on ClawHub</text>
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14">${escapeXml(handle)}/${escapeXml(slug)}</text>
+  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12">skill not found on ClawHub</text>
   ${brandingText()}
 </svg>`;
 }
@@ -127,12 +125,12 @@ export function renderChartSvg(
     .map((f) => {
       const y = PAD.top + CHART_H - f * CHART_H;
       const label = fmtAxisLabel(Math.round(yMin + (yMax - yMin) * f), yMax - yMin);
-      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="${f === 0 ? 1.4 : 1}" stroke-dasharray="${f === 0 ? "0" : "2,2"}" filter="url(#xkcdify)"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="13.5" fill="${MUTED_COLOR}">${label}</text>`;
+      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke-width="${f === 0 ? 1.4 : 1}" stroke-dasharray="${f === 0 ? "0" : "2,2"}" filter="url(#xkcdify)"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="13.5">${label}</text>`;
     })
     .join("");
 
   // Solid hand-drawn axis borders: left (y-axis) and bottom (x-axis).
-  const borders = `<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + CHART_H}" stroke="${BORDER_COLOR}" stroke-width="2.1" filter="url(#xkcdify)"/><line x1="${PAD.left}" y1="${PAD.top + CHART_H}" x2="${W - PAD.right}" y2="${PAD.top + CHART_H}" stroke="${BORDER_COLOR}" stroke-width="2.1" filter="url(#xkcdify)"/>`;
+  const borders = `<line class="axis-border" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + CHART_H}" stroke-width="2.1" filter="url(#xkcdify)"/><line class="axis-border" x1="${PAD.left}" y1="${PAD.top + CHART_H}" x2="${W - PAD.right}" y2="${PAD.top + CHART_H}" stroke-width="2.1" filter="url(#xkcdify)"/>`;
 
   // Dotted date ticks along the x-axis. Year appears only on the first tick or
   // when the year changes; density auto-scales with chart width.
@@ -161,7 +159,7 @@ export function renderChartSvg(
         snapshots[idx].captured_at,
         atStart || year !== firstYear,
       );
-      return `<text class="text-muted" x="${xPos.toFixed(1)}" y="${H - 28}" text-anchor="${anchor}" font-size="13.5" fill="${MUTED_COLOR}">${label}</text>`;
+      return `<text class="text-muted" x="${xPos.toFixed(1)}" y="${H - 28}" text-anchor="${anchor}" font-size="13.5">${label}</text>`;
     })
     .join("");
 
@@ -202,9 +200,9 @@ export function renderChartSvg(
 
   return `${svgOpen()}
   ${defs}
-  <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${PAD.left}" y="19" font-size="18" fill="${TEXT_COLOR}" font-weight="500">${title}</text>
-  <text class="text-muted" x="${W - PAD.right}" y="17" text-anchor="end" font-size="15" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="text-primary" x="${PAD.left}" y="19" font-size="18" font-weight="500">${title}</text>
+  <text class="text-muted" x="${W - PAD.right}" y="17" text-anchor="end" font-size="15">${fmtNum(lastDownloads)} ClawHub downloads</text>
   ${gridLines}
   ${borders}
   ${smoothLine}
