@@ -584,7 +584,7 @@ export function renderBlogIndexHtml(gaTag: string): string {
       const range = formatWeekRange(monday);
       return `<li>
         <div class="post-date">${escapeHtml(range)}</div>
-        <div class="post-title"><a href="/blog/${slug}">Trending OpenClaw Skills</a></div>
+        <div class="post-title"><a href="/blog/${slug}">Trending OpenClaw Skills — Week of ${escapeHtml(range)}</a></div>
         <div class="post-desc">The fastest growing, biggest jumps, and freshest skills from the past week.</div>
       </li>`;
     })
