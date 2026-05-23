@@ -1,4 +1,5 @@
 import { line, curveMonotoneX, area } from "d3-shape";
+import { XKCD_FONT_WOFF_BASE64 } from "./xkcd-font.js";
 
 export type Snapshot = {
   captured_at: string;
@@ -18,10 +19,6 @@ const PAD = { top: 28, right: 16, bottom: 44, left: 56 };
 const CHART_W = W - PAD.left - PAD.right;
 const CHART_H = H - PAD.top - PAD.bottom;
 const LINE_COLOR = "#f97316";
-const AXIS_COLOR = "#d1d5db";
-const TEXT_COLOR = "#374151";
-const MUTED_COLOR = "#6b7280";
-const ATTRIBUTION = "skill-history.com · Pineapple AI";
 
 function escapeXml(s: string): string {
   return s
@@ -56,39 +53,44 @@ function fmtAxisLabel(n: number, range: number): string {
   return fmtNum(n);
 }
 
-const DARK_MODE_STYLE = `<style>
-  @media (prefers-color-scheme: dark) {
-    .bg { fill: #0f172a; }
-    .text-primary { fill: #e5e7eb; }
-    .text-muted { fill: #9ca3af; }
-    .grid { stroke: #334155; }
-  }
-</style>`;
+// The hand-drawn font is inlined as a data URI (NOT a relative url(...)) so the
+// SVG renders correctly when loaded as an <img> / in README embeds, where a
+// relative font URL has no base to resolve against.
+const FONT_FACE = `@font-face{font-family:'xkcd';src:url('data:font/woff;base64,${XKCD_FONT_WOFF_BASE64}') format('woff');}`;
+// All colors are driven by CSS classes (never inline fill/stroke on the
+// elements below), so light + dark switch together. Mixing an inline fill
+// with a class makes the inline value win in <img>/README renderers, which
+// left text invisible on dark backgrounds.
+const SVG_STYLE = `<style>${FONT_FACE}text{letter-spacing:.4px}.bg{fill:#fff}.text-primary{fill:#374151}.text-muted{fill:#6b7280}.grid{stroke:#d1d5db}.axis-border{stroke:#111}@media (prefers-color-scheme: dark){.bg{fill:#0f172a}.text-primary{fill:#e5e7eb}.text-muted{fill:#9ca3af}.grid{stroke:#334155}.axis-border{stroke:#cbd5e1}}</style>`;
+
+// Hand-drawn "xkcdify" wobble: applied to grid lines, axis borders, the curve
+// and the dots — never to <text>, which must stay legible.
+const XKCDIFY_FILTER = `<filter id="xkcdify" filterUnits="userSpaceOnUse" x="-10" y="-10" width="${W + 20}" height="${H + 20}"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.0" xChannelSelector="R" yChannelSelector="G"/></filter>`;
 
 function svgOpen(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="system-ui, -apple-system, Segoe UI, sans-serif">${DARK_MODE_STYLE}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="xkcd, system-ui">${SVG_STYLE}`;
 }
 
-function attributionText(): string {
-  return `<text class="text-muted" x="${W - 8}" y="${H - 8}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${ATTRIBUTION}</text>`;
+function brandingText(): string {
+  return `<text x="${W - PAD.right}" y="${H - 9}" text-anchor="end" font-size="15.5" fill="${LINE_COLOR}" font-weight="700" letter-spacing="0.3">skill-history.com by Pineapple AI&#160;🍍</text>`;
 }
 
 export function renderEmptySvg(skill: SkillMeta): string {
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
   return `${svgOpen()}
-  <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${title}</text>
-  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">tracking starts on next sweep</text>
-  ${attributionText()}
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14">${title}</text>
+  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12">tracking starts on next sweep</text>
+  ${brandingText()}
 </svg>`;
 }
 
 export function renderNotFoundSvg(handle: string, slug: string): string {
   return `${svgOpen()}
-  <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14" fill="${TEXT_COLOR}">${escapeXml(handle)}/${escapeXml(slug)}</text>
-  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12" fill="${MUTED_COLOR}">skill not found on ClawHub</text>
-  ${attributionText()}
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="text-primary" x="${W / 2}" y="${H / 2 - 6}" text-anchor="middle" font-size="14">${escapeXml(handle)}/${escapeXml(slug)}</text>
+  <text class="text-muted" x="${W / 2}" y="${H / 2 + 14}" text-anchor="middle" font-size="12">skill not found on ClawHub</text>
+  ${brandingText()}
 </svg>`;
 }
 
@@ -116,9 +118,6 @@ export function renderChartSvg(
     x: xAt(i),
     y: yAt(s.downloads),
   }));
-  const points = coords.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const firstDate = snapshots[0].captured_at;
-  const lastDate = snapshots[n - 1].captured_at;
   const title = escapeXml(skill.display_name ?? `${skill.handle}/${skill.slug}`);
   const lastDownloads = snapshots[n - 1].downloads;
 
@@ -126,7 +125,41 @@ export function renderChartSvg(
     .map((f) => {
       const y = PAD.top + CHART_H - f * CHART_H;
       const label = fmtAxisLabel(Math.round(yMin + (yMax - yMin) * f), yMax - yMin);
-      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="1" stroke-dasharray="${f === 0 ? "0" : "2,2"}"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${label}</text>`;
+      return `<line class="grid" x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke-width="${f === 0 ? 1.4 : 1}" stroke-dasharray="${f === 0 ? "0" : "2,2"}" filter="url(#xkcdify)"/><text class="text-muted" x="${PAD.left - 6}" y="${y + 3}" text-anchor="end" font-size="13.5">${label}</text>`;
+    })
+    .join("");
+
+  // Solid hand-drawn axis borders: left (y-axis) and bottom (x-axis).
+  const borders = `<line class="axis-border" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + CHART_H}" stroke-width="2.1" filter="url(#xkcdify)"/><line class="axis-border" x1="${PAD.left}" y1="${PAD.top + CHART_H}" x2="${W - PAD.right}" y2="${PAD.top + CHART_H}" stroke-width="2.1" filter="url(#xkcdify)"/>`;
+
+  // Dotted date ticks along the x-axis. Year appears only on the first tick or
+  // when the year changes; density auto-scales with chart width.
+  const maxTicks = Math.max(2, Math.floor(CHART_W / 95) + 1);
+  const want = n === 1 ? 1 : Math.min(n, maxTicks);
+  const tickIdxs = [
+    ...new Set(
+      Array.from({ length: want }, (_, i) =>
+        want === 1 ? 0 : Math.round((i / (want - 1)) * (n - 1)),
+      ),
+    ),
+  ].sort((a, b) => a - b);
+  const firstYear = snapshots[tickIdxs[0]].captured_at.slice(0, 4);
+  const xTicks = tickIdxs
+    .map((idx, i) => {
+      const atStart = i === 0;
+      const atEnd = i === tickIdxs.length - 1;
+      const anchor = atStart ? "start" : atEnd ? "end" : "middle";
+      const xPos = atStart
+        ? PAD.left + 2
+        : atEnd
+          ? W - PAD.right - 2
+          : xAt(idx);
+      const year = snapshots[idx].captured_at.slice(0, 4);
+      const label = fmtXTickDate(
+        snapshots[idx].captured_at,
+        atStart || year !== firstYear,
+      );
+      return `<text class="text-muted" x="${xPos.toFixed(1)}" y="${H - 28}" text-anchor="${anchor}" font-size="13.5">${label}</text>`;
     })
     .join("");
 
@@ -149,32 +182,41 @@ export function renderChartSvg(
           .curve(curveMonotoneX)(coords) ?? "")
       : "";
 
+  // The area fill stays un-filtered (a wobbled gradient edge looks muddy);
+  // the curve stroke and dots get the hand-drawn xkcdify wobble.
   const smoothLine =
     n >= 2
-      ? `<path d="${areaPath}" fill="url(#grad)" /><path d="${curvePath}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+      ? `<path d="${areaPath}" fill="url(#grad)" /><path d="${curvePath}" fill="none" stroke="${LINE_COLOR}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" filter="url(#xkcdify)"/>`
       : "";
   const dotRadius = n === 1 ? 4 : 2.5;
   const dots = coords
     .map(
       (p) =>
-        `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${dotRadius}" fill="${LINE_COLOR}"/>`,
+        `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${dotRadius}" fill="${LINE_COLOR}" filter="url(#xkcdify)"/>`,
     )
     .join("");
 
-  const gradient = `<defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${LINE_COLOR}" stop-opacity="0.15"/><stop offset="100%" stop-color="${LINE_COLOR}" stop-opacity="0.01"/></linearGradient></defs>`;
+  const defs = `<defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${LINE_COLOR}" stop-opacity="0.15"/><stop offset="100%" stop-color="${LINE_COLOR}" stop-opacity="0.01"/></linearGradient>${XKCDIFY_FILTER}</defs>`;
 
   return `${svgOpen()}
-  ${gradient}
-  <rect class="bg" width="100%" height="100%" fill="white"/>
-  <text class="text-primary" x="${PAD.left}" y="16" font-size="12" fill="${TEXT_COLOR}" font-weight="600">${title}</text>
-  <text class="text-muted" x="${W - PAD.right}" y="16" text-anchor="end" font-size="12" fill="${MUTED_COLOR}">${fmtNum(lastDownloads)} ClawHub downloads</text>
+  ${defs}
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="text-primary" x="${PAD.left}" y="19" font-size="18" font-weight="500">${title}</text>
+  <text class="text-muted" x="${W - PAD.right}" y="17" text-anchor="end" font-size="15">${fmtNum(lastDownloads)} ClawHub downloads</text>
   ${gridLines}
+  ${borders}
   ${smoothLine}
   ${dots}
-  <text class="text-muted" x="${PAD.left}" y="${H - 16}" font-size="10" fill="${MUTED_COLOR}">${firstDate}</text>
-  <text class="text-muted" x="${W - PAD.right}" y="${H - 16}" text-anchor="end" font-size="10" fill="${MUTED_COLOR}">${lastDate}</text>
-  ${attributionText()}
+  ${xTicks}
+  ${brandingText()}
 </svg>`;
+}
+
+// Format an x-axis date tick. captured_at is "YYYY-MM-DD"; show YYYY.MM.DD when
+// the year should be shown (first tick / year change), otherwise MM.DD.
+function fmtXTickDate(captured_at: string, includeYear: boolean): string {
+  const [y, m, d] = captured_at.split("-");
+  return includeYear ? `${y}.${m}.${d}` : `${m}.${d}`;
 }
 
 function niceAxis(
