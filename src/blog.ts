@@ -338,29 +338,52 @@ async function getEcosystemStats(
   startDate: string,
   endDate: string,
 ): Promise<EcosystemStats> {
+  // NOTE: The sweep paginates by downloads DESC and may span multiple cron
+  // runs, so a single day's `captured_at` can hold only a partial slice of the
+  // catalog (e.g. just the top ~200 most-downloaded skills) until that day's
+  // sweep finishes. Counting rows at one exact date therefore wildly
+  // undercounts the catalog and can make the weekly delta go negative.
+  //
+  // Instead, derive catalog size from each skill's first-seen date, which is
+  // stable once recorded and immune to a partial recent sweep:
+  //   catalog_start = skills first seen before the week began
+  //   catalog_end   = skills first seen on or before the week's end
+  //   delta (end - start) = net new skills introduced during the week (>= 0)
   const start = await db
     .prepare(
-      "SELECT COUNT(*) AS cnt FROM snapshots WHERE captured_at = ?",
+      `SELECT COUNT(*) AS cnt FROM (
+         SELECT skill_id FROM snapshots GROUP BY skill_id HAVING MIN(captured_at) < ?
+       )`,
     )
     .bind(startDate)
     .first<{ cnt: number }>();
   const end = await db
     .prepare(
-      "SELECT COUNT(*) AS cnt FROM snapshots WHERE captured_at = ?",
+      `SELECT COUNT(*) AS cnt FROM (
+         SELECT skill_id FROM snapshots GROUP BY skill_id HAVING MIN(captured_at) <= ?
+       )`,
     )
     .bind(endDate)
     .first<{ cnt: number }>();
+  // Total downloads added across the ecosystem this week. Use each skill's
+  // first and last snapshot *within* the week rather than two exact dates, so
+  // skills missing from a partial final-day sweep still contribute (measured
+  // through their latest available day in the week) instead of being dropped.
   const delta = await db
     .prepare(
-      `WITH ss AS (
-         SELECT skill_id, downloads AS dl_start FROM snapshots WHERE captured_at = ?
+      `WITH wk AS (
+         SELECT skill_id, captured_at, downloads
+         FROM snapshots WHERE captured_at BETWEEN ? AND ?
        ),
-       es AS (
-         SELECT skill_id, downloads AS dl_end FROM snapshots WHERE captured_at = ?
+       bounds AS (
+         SELECT skill_id, MIN(captured_at) AS first_at, MAX(captured_at) AS last_at
+         FROM wk GROUP BY skill_id
        )
-       SELECT COALESCE(SUM(es.dl_end - ss.dl_start), 0) AS added
-       FROM ss JOIN es ON es.skill_id = ss.skill_id
-       WHERE es.dl_end > ss.dl_start`,
+       SELECT COALESCE(SUM(e.downloads - s.downloads), 0) AS added
+       FROM bounds b
+       JOIN wk s ON s.skill_id = b.skill_id AND s.captured_at = b.first_at
+       JOIN wk e ON e.skill_id = b.skill_id AND e.captured_at = b.last_at
+       WHERE e.downloads > s.downloads`,
     )
     .bind(startDate, endDate)
     .first<{ added: number }>();
