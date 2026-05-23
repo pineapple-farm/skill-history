@@ -622,6 +622,15 @@ GET /api/search?q={query}&limit=10
 Same search as the MCP tool, available as a REST endpoint.
 Minimum 2 characters. Max 50 results. Cached 60s.
 
+## Service discovery
+
+Machine-readable manifests for agent auto-discovery (all return JSON):
+
+- GET /.well-known/mcp.json    — MCP server descriptor (endpoint, transport, tools)
+- GET /.well-known/agent-card.json  — A2A Agent Card (also at /agent-card.json, /agents/agent-card.json, /mcp/agent-card.json)
+- GET /a2a.json and /v1/agent.json  — A2A protocol descriptors
+- GET /api/openapi.json        — OpenAPI 3.0.3 spec for the REST endpoints
+
 ## About
 Built by Pineapple AI (https://pineappleai.com)
 Source: https://github.com/pineapple-farm/skill-history
