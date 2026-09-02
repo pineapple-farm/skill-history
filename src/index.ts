@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import puppeteer from "@cloudflare/puppeteer";
 import { runSweep } from "./sweep";
-import { runSkillsshSweep } from "./sweep-skillssh";
 import {
   renderChartPageHtml,
   renderChartSvg,
@@ -13,6 +12,7 @@ import {
 } from "./chart";
 import { createMcpHandler, MCP_TOOLS } from "./mcp";
 import { logMcpUsage } from "./mcp-logging";
+import { searchSkills, SEARCH_CACHE_CONTROL } from "./search";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import {
   getCompletedWeeks,
@@ -49,6 +49,73 @@ app.use("*", async (c, next) => {
   return next();
 });
 
+// ---------- Edge cache ----------
+//
+// Cloudflare only honours Cache-Control on responses it fetched from an
+// origin. A Response built inside a Worker is never stored in the CDN cache
+// by itself, so until this middleware existed every "cached" route below
+// (homepage, sitemap, search, badges, charts, skill pages, blog) ran its D1
+// queries on every single request and the s-maxage headers only reached
+// browsers. The Cache API (caches.default) is how Worker-generated responses
+// get into the edge cache; it honours the same s-maxage / max-age values the
+// routes already set.
+//
+// Caveats:
+//   - The cache is per data centre: a route renders once per colo per TTL.
+//   - Only 200 responses whose Cache-Control includes `public` are stored.
+//   - /og/* keeps its own entries (Browser Rendering output); /mcp is
+//     JSON-RPC over POST and can't be keyed by URL.
+const EDGE_CACHE_SKIP = [/^\/og\//, /^\/mcp$/];
+
+function edgeCacheKey(req: Request): Request | null {
+  if (req.method !== "GET") return null;
+  const url = new URL(req.url);
+  if (EDGE_CACHE_SKIP.some((re) => re.test(url.pathname))) return null;
+  // Canonical host + path only, so ?utm_source=... can't bust the cache.
+  // Search keeps its parameters; the skill page's JSON variant (selected by
+  // the Accept header) is keyed apart from the HTML one.
+  const key = new URL(`https://skill-history.com${url.pathname}`);
+  if (url.pathname === "/api/search") {
+    key.searchParams.set("q", url.searchParams.get("q") ?? "");
+    key.searchParams.set("limit", url.searchParams.get("limit") ?? "");
+  }
+  if (req.headers.get("accept")?.includes("application/json")) {
+    key.searchParams.set("format", "json");
+  }
+  return new Request(key.toString(), { method: "GET" });
+}
+
+app.use("*", async (c, next) => {
+  const key = edgeCacheKey(c.req.raw);
+  if (!key) return next();
+
+  const cache = caches.default;
+  const hit = await cache.match(key);
+  if (hit) {
+    const res = new Response(hit.body, hit);
+    res.headers.set("X-Cache", "HIT");
+    return res;
+  }
+
+  await next();
+
+  const res = c.res;
+  const cacheControl = res.headers.get("Cache-Control") ?? "";
+  if (res.status === 200 && /\bpublic\b/.test(cacheControl)) {
+    const put = cache.put(key, res.clone());
+    try {
+      c.executionCtx.waitUntil(put);
+    } catch {
+      await put;
+    }
+    try {
+      res.headers.set("X-Cache", "MISS");
+    } catch {
+      // Immutable headers (a Response passed straight through from fetch).
+    }
+  }
+});
+
 // In-memory TTL cache for GitHub repo existence checks.
 // Workers in-memory cache resets per isolate — best-effort, good enough for launch.
 const githubCache = new Map<string, { exists: boolean; ts: number }>();
@@ -83,25 +150,38 @@ app.get("/", async (c) => {
     .join("");
 
   // Trending: highest % growth, comparing latest snapshot vs oldest available
-  // (ideally 7 days back, falls back to whatever earliest we have)
+  // (ideally 7 days back, falls back to whatever earliest we have).
+  //
+  // Shape matters for D1 rows_read: start from the oldest day's rows that
+  // clear the 1,000-download bar (a few thousand), seek each one's latest
+  // snapshot by primary key, and only join skills for the two winners.
+  // CROSS JOIN pins that loop order. The previous form started from every
+  // skill and read ~3 rows per skill on every homepage render.
   let trendingResults: Array<{ handle: string; slug: string; display_name: string | null; growth_pct: number }> = [];
   try {
     const trending = await c.env.DB.prepare(
-      `SELECT s.handle, s.slug, s.display_name,
-              latest.downloads AS dl_now,
-              older.downloads AS dl_then,
-              CASE WHEN older.downloads > 0
-                THEN ROUND((latest.downloads - older.downloads) * 100.0 / older.downloads, 1)
-                ELSE 0 END AS growth_pct
-       FROM skills s
-       JOIN snapshots latest ON latest.skill_id = s.id
-         AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
-       JOIN snapshots older ON older.skill_id = s.id
-         AND older.captured_at = (SELECT MIN(captured_at) FROM snapshots)
-       WHERE older.downloads >= 1000
-         AND latest.downloads > older.downloads
-       ORDER BY growth_pct DESC
-       LIMIT 2`,
+      `WITH older AS (
+         SELECT skill_id, downloads
+         FROM snapshots
+         WHERE captured_at = (SELECT MIN(captured_at) FROM snapshots)
+           AND downloads >= 1000
+       ),
+       ranked AS (
+         SELECT o.skill_id,
+                latest.downloads AS dl_now,
+                o.downloads AS dl_then,
+                ROUND((latest.downloads - o.downloads) * 100.0 / o.downloads, 1) AS growth_pct
+         FROM older o
+         CROSS JOIN snapshots latest ON latest.skill_id = o.skill_id
+           AND latest.captured_at = (SELECT MAX(captured_at) FROM snapshots)
+         WHERE latest.downloads > o.downloads
+         ORDER BY growth_pct DESC
+         LIMIT 2
+       )
+       SELECT s.handle, s.slug, s.display_name, r.dl_now, r.dl_then, r.growth_pct
+       FROM ranked r
+       JOIN skills s ON s.id = r.skill_id
+       ORDER BY r.growth_pct DESC`,
     ).all<{ handle: string; slug: string; display_name: string | null; growth_pct: number }>();
     trendingResults = trending.results ?? [];
   } catch (err) {
@@ -119,7 +199,8 @@ app.get("/", async (c) => {
     )
     .join("");
 
-  c.header("Cache-Control", "public, max-age=300, s-maxage=300");
+  // Data changes once a day after the sweep; an hour at the edge is plenty.
+  c.header("Cache-Control", "public, max-age=300, s-maxage=3600");
   return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -894,19 +975,10 @@ app.get("/api/search", async (c) => {
     return c.json({ query, results: [] });
   }
 
-  const pattern = `%${query}%`;
-  const { results } = await c.env.DB.prepare(
-    `SELECT s.handle, s.slug, s.display_name, s.source,
-            (SELECT sn.downloads FROM snapshots sn WHERE sn.skill_id = s.id ORDER BY sn.captured_at DESC LIMIT 1) as downloads
-     FROM skills s
-     WHERE s.handle LIKE ? OR s.slug LIKE ? OR s.display_name LIKE ?
-     ORDER BY downloads DESC
-     LIMIT ?`
-  ).bind(pattern, pattern, pattern, limit)
-   .all<{ handle: string; slug: string; display_name: string | null; source: string; downloads: number | null }>();
+  const results = await searchSkills(c.env.DB, query, limit);
 
-  return c.json({ query, results: results ?? [] }, 200, {
-    "Cache-Control": "public, max-age=60, s-maxage=60",
+  return c.json({ query, results }, 200, {
+    "Cache-Control": SEARCH_CACHE_CONTROL,
   });
 });
 
@@ -1182,6 +1254,9 @@ app.get("/:handle/:slug", async (c) => {
         404,
       );
     }
+    // Snapshots change once a day after the sweep; let the edge cache absorb
+    // repeat views (including crawlers) instead of re-reading the history.
+    c.header("Cache-Control", "public, max-age=300, s-maxage=3600");
     if (wantsJson) {
       return c.json({ skill: data.skill, snapshots: data.snapshots });
     }
@@ -1206,12 +1281,20 @@ app.get("/:handle/:slug", async (c) => {
 
     // Fire both in parallel — neither blocks the other
     const [moreByAuthorRows, hasGithub] = await Promise.all([
+      // Reads only this author's rows: the (handle, slug) index finds their
+      // skills and each one's latest snapshot is a primary-key seek. The old
+      // join on captured_at = MAX(captured_at) made SQLite start from the
+      // latest day's snapshots instead (~30k rows per skill page, the single
+      // biggest D1 read on the site) and also dropped skills the in-progress
+      // sweep hadn't reached yet. The unary + keeps the source filter from
+      // tempting the planner onto idx_skills_source.
       c.env.DB.prepare(
-        `SELECT s.slug, s.display_name, sn.downloads
-         FROM skills s JOIN snapshots sn ON sn.skill_id = s.id
-         WHERE s.handle = ? AND s.slug != ?
-         AND sn.captured_at = (SELECT MAX(captured_at) FROM snapshots)
-         ORDER BY sn.downloads DESC LIMIT 3`,
+        `SELECT s.slug, s.display_name,
+                (SELECT sn.downloads FROM snapshots sn
+                  WHERE sn.skill_id = s.id ORDER BY sn.captured_at DESC LIMIT 1) AS downloads
+         FROM skills s
+         WHERE s.handle = ? AND s.slug != ? AND +s.source = 'clawhub'
+         ORDER BY downloads DESC LIMIT 3`,
       )
         .bind(handle, slug)
         .all<{ slug: string; display_name: string | null; downloads: number }>(),
@@ -1233,17 +1316,10 @@ app.get("/:handle/:slug", async (c) => {
 export default {
   fetch: app.fetch,
 
-  async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
-    // Two crons: "0 */2 * * *" (even hours) for ClawHub,
-    // "0 1-23/2 * * *" (odd hours) for skills.sh.
-    // Determine which by checking the scheduled time.
-    const scheduledHour = new Date(controller.scheduledTime).getUTCHours();
-    if (scheduledHour % 2 === 0) {
-      const result = await runSweep(env.DB);
-      console.log("clawhub sweep complete", result);
-    } else {
-      const result = await runSkillsshSweep(env.DB);
-      console.log("skillssh sweep complete", result);
-    }
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    // Single cron ("0 */2 * * *"): the ClawHub sweep. A skills.sh sweep used
+    // to run on odd hours; it was removed because that data was never served.
+    const result = await runSweep(env.DB);
+    console.log("clawhub sweep complete", result);
   },
 } satisfies ExportedHandler<Env>;

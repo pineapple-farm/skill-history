@@ -15,12 +15,25 @@ type SkillRow = {
   skill: {
     slug: string;
     displayName: string;
+    // Epoch ms. Used as first_seen for skills we insert for the first time.
+    createdAt?: number;
     stats: {
       downloads: number;
-      installsAllTime: number;
+      // ClawHub renamed installsAllTime -> installs around 2026-06-30. Binding
+      // the missing field as undefined made D1 reject every batch, which
+      // silently stopped the sweep for two months. Accept either.
+      installs?: number;
+      installsAllTime?: number;
     };
   };
 };
+
+// YYYY-MM-DD for a ClawHub createdAt timestamp, or null if unusable.
+function isoDateFromMs(ms: unknown): string | null {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return null;
+  const iso = new Date(ms).toISOString().slice(0, 10);
+  return iso;
+}
 
 type PageResponse = {
   page: SkillRow[];
@@ -34,6 +47,7 @@ type SweepResult = {
   resumed_from_cursor: boolean;
   pages_this_run: number;
   skills_this_run: number;
+  skipped_this_run: number;
   pages_done_today: number;
   complete_for_today: boolean;
   duration_ms: number;
@@ -109,12 +123,10 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
   const startedAtUtc = new Date(started).toISOString();
   const today = startedAtUtc.slice(0, 10);
 
-  // Observability: log estimated catalog size for capacity planning.
-  // ~57K skills at 200/page = 285 pages. MAX_PAGES_PER_RUN(48) × 12 cron fires = 576 > 285.
-  const countRow = await db.prepare("SELECT COUNT(*) AS cnt FROM skills").first<{ cnt: number }>();
-  const estimatedPages = countRow ? Math.ceil(countRow.cnt / PAGE_SIZE) : "unknown";
-  console.log(`[sweep] catalog estimate: ${countRow?.cnt ?? "?"} skills, ~${estimatedPages} pages (max_pages_per_run=${MAX_PAGES_PER_RUN})`);
-
+  // Capacity note: ~57K skills at 200/page = 285 pages. MAX_PAGES_PER_RUN(48)
+  // × 12 cron fires = 576 > 285. (A COUNT(*) over skills used to be logged
+  // here for this; it was a full table scan per cron fire spent on a log
+  // line. pages_done_today in the completion log carries the same signal.)
   const state = await loadState(db);
   const sameDay = state.captured_at === today;
   const cursorIn = sameDay ? state.cursor : null;
@@ -139,6 +151,7 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
       resumed_from_cursor: false,
       pages_this_run: 0,
       skills_this_run: 0,
+      skipped_this_run: 0,
       pages_done_today: pagesDoneAtStart,
       complete_for_today: true,
       duration_ms: 0,
@@ -148,23 +161,37 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
   let cursor = cursorIn;
   let pagesThisRun = 0;
   let skillsThisRun = 0;
+  let skippedThisRun = 0;
   let sawEnd = false;
 
   try {
     while (pagesThisRun < MAX_PAGES_PER_RUN) {
       const { page, hasMore, nextCursor } = await fetchPage(cursor);
-      pagesThisRun++;
 
       const stmts: D1PreparedStatement[] = [];
       for (const row of page) {
+        const handle = row?.ownerHandle;
+        const slug = row?.skill?.slug;
+        const downloads = row?.skill?.stats?.downloads;
+        if (typeof handle !== "string" || typeof slug !== "string" || typeof downloads !== "number") {
+          // One malformed row must not poison the whole batch (D1 batches are
+          // atomic, so a single bad bind used to lose the entire page).
+          skippedThisRun++;
+          continue;
+        }
+        const installs = row.skill.stats.installs ?? row.skill.stats.installsAllTime ?? null;
+        // Prefer ClawHub's own creation date so a skill that appeared while
+        // the sweep was down still lands in the right week; fall back to today.
+        const firstSeen = isoDateFromMs(row.skill.createdAt) ?? today;
         stmts.push(
           db
             .prepare(
-              `INSERT INTO skills (handle, slug, display_name)
-               VALUES (?, ?, ?)
-               ON CONFLICT(handle, slug) DO UPDATE SET display_name = excluded.display_name`,
+              `INSERT INTO skills (handle, slug, display_name, first_seen)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(handle, slug) DO UPDATE SET display_name = excluded.display_name
+                 WHERE skills.display_name IS NOT excluded.display_name`,
             )
-            .bind(row.ownerHandle, row.skill.slug, row.skill.displayName),
+            .bind(handle, slug, row.skill.displayName ?? null, firstSeen),
         );
         stmts.push(
           db
@@ -175,13 +202,7 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
                  downloads = excluded.downloads,
                  installs_all_time = excluded.installs_all_time`,
             )
-            .bind(
-              row.ownerHandle,
-              row.skill.slug,
-              today,
-              row.skill.stats.downloads,
-              row.skill.stats.installsAllTime,
-            ),
+            .bind(handle, slug, today, downloads, installs),
         );
         skillsThisRun++;
       }
@@ -189,6 +210,12 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
       if (stmts.length > 0) {
         await db.batch(stmts);
       }
+      // Count the page only once its rows are committed. If the batch throws,
+      // `cursor` still points at this page and pages_done excludes it, so the
+      // next run refetches it. (Counting before the batch left a first-page
+      // failure looking exactly like "complete for today": cursor NULL,
+      // pages_done 1, and the sweep no-op'd for the rest of the day.)
+      pagesThisRun++;
 
       if (!hasMore) {
         sawEnd = true;
@@ -215,13 +242,14 @@ export async function runSweep(db: D1Database): Promise<SweepResult> {
     resumed_from_cursor: resumedFromCursor,
     pages_this_run: pagesThisRun,
     skills_this_run: skillsThisRun,
+    skipped_this_run: skippedThisRun,
     pages_done_today: pagesDoneTotal,
     complete_for_today: sawEnd,
     duration_ms: Date.now() - started,
   };
 
   console.log(
-    `[sweep] done pages_this_run=${pagesThisRun} skills_this_run=${skillsThisRun} pages_done_today=${pagesDoneTotal} complete=${sawEnd} duration_ms=${result.duration_ms}`,
+    `[sweep] done pages_this_run=${pagesThisRun} skills_this_run=${skillsThisRun} skipped=${skippedThisRun} pages_done_today=${pagesDoneTotal} complete=${sawEnd} duration_ms=${result.duration_ms}`,
   );
 
   return result;

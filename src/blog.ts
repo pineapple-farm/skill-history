@@ -308,17 +308,19 @@ async function getHotNewSkills(
   weekStart: string,
   weekEnd: string,
 ): Promise<NewSkillRow[]> {
+  // skills.first_seen is the date of a skill's first snapshot (set on insert
+  // by the sweep, backfilled by migration 0005). Ranging over it via
+  // idx_skills_source_first_seen touches only that week's new skills instead
+  // of grouping the entire snapshots table.
   const { results } = await db
     .prepare(
       `SELECT s.handle, s.slug, s.display_name,
-              MIN(sn.captured_at) AS first_seen,
+              s.first_seen,
               (SELECT downloads FROM snapshots WHERE skill_id = s.id ORDER BY captured_at DESC LIMIT 1) AS current_dl
        FROM skills s
-       JOIN snapshots sn ON sn.skill_id = s.id
        WHERE s.source = 'clawhub'
+         AND s.first_seen BETWEEN ? AND ?
          AND LENGTH(s.slug) <= 80
-       GROUP BY s.id
-       HAVING first_seen >= ? AND first_seen <= ?
        ORDER BY current_dl DESC
        LIMIT 5`,
     )
@@ -349,47 +351,45 @@ async function getEcosystemStats(
   //   catalog_start = skills first seen before the week began
   //   catalog_end   = skills first seen on or before the week's end
   //   delta (end - start) = net new skills introduced during the week (>= 0)
-  const start = await db
+  //
+  // skills.first_seen holds that date, so this is one range scan over
+  // idx_skills_source_first_seen. It used to be two GROUP BYs over the whole
+  // snapshots table, i.e. every snapshot row ever captured, per render.
+  const catalog = await db
     .prepare(
-      `SELECT COUNT(*) AS cnt FROM (
-         SELECT skill_id FROM snapshots GROUP BY skill_id HAVING MIN(captured_at) < ?
-       )`,
+      `SELECT COALESCE(SUM(first_seen < ?), 0) AS start_cnt, COUNT(*) AS end_cnt
+       FROM skills
+       WHERE source = 'clawhub' AND first_seen <= ?`,
     )
-    .bind(startDate)
-    .first<{ cnt: number }>();
-  const end = await db
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM (
-         SELECT skill_id FROM snapshots GROUP BY skill_id HAVING MIN(captured_at) <= ?
-       )`,
-    )
-    .bind(endDate)
-    .first<{ cnt: number }>();
+    .bind(startDate, endDate)
+    .first<{ start_cnt: number; end_cnt: number }>();
   // Total downloads added across the ecosystem this week. Use each skill's
   // first and last snapshot *within* the week rather than two exact dates, so
   // skills missing from a partial final-day sweep still contribute (measured
   // through their latest available day in the week) instead of being dropped.
+  //
+  // Window functions make this a single pass over the week's rows. The
+  // previous CTE-and-self-join form re-read the window several times over
+  // (~800k rows per run for a 7-day window).
   const delta = await db
     .prepare(
-      `WITH wk AS (
-         SELECT skill_id, captured_at, downloads
-         FROM snapshots WHERE captured_at BETWEEN ? AND ?
-       ),
-       bounds AS (
-         SELECT skill_id, MIN(captured_at) AS first_at, MAX(captured_at) AS last_at
-         FROM wk GROUP BY skill_id
+      `SELECT COALESCE(SUM(last_dl - first_dl), 0) AS added
+       FROM (
+         SELECT ROW_NUMBER() OVER w AS rn,
+                FIRST_VALUE(downloads) OVER wf AS first_dl,
+                LAST_VALUE(downloads) OVER wf AS last_dl
+         FROM snapshots
+         WHERE captured_at BETWEEN ? AND ?
+         WINDOW w AS (PARTITION BY skill_id ORDER BY captured_at),
+                wf AS (w ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
        )
-       SELECT COALESCE(SUM(e.downloads - s.downloads), 0) AS added
-       FROM bounds b
-       JOIN wk s ON s.skill_id = b.skill_id AND s.captured_at = b.first_at
-       JOIN wk e ON e.skill_id = b.skill_id AND e.captured_at = b.last_at
-       WHERE e.downloads > s.downloads`,
+       WHERE rn = 1 AND last_dl > first_dl`,
     )
     .bind(startDate, endDate)
     .first<{ added: number }>();
   return {
-    catalog_start: start?.cnt ?? 0,
-    catalog_end: end?.cnt ?? 0,
+    catalog_start: catalog?.start_cnt ?? 0,
+    catalog_end: catalog?.end_cnt ?? 0,
     total_added: delta?.added ?? 0,
   };
 }
@@ -447,11 +447,78 @@ export type WeeklyPostData = {
   stats: EcosystemStats;
 };
 
+// ---------- Materialised post data ----------
+//
+// Computing a week's leaderboards reads on the order of a million snapshot
+// rows, and the edge cache is per data centre, so without this every colo
+// would recompute every post on its own schedule. Each week's data lives in
+// weekly_post_cache (migration 0005): a settled week is computed once and
+// never again; the in-progress week (and the day or so after it ends, while
+// the last sweep may still be landing) is recomputed at most once per UTC
+// day, which is how often snapshots change.
+
+type WeeklyPostCacheRow = { data: string; final: number; computed_at: string };
+
+async function readWeeklyPostCache(
+  db: D1Database,
+  monday: string,
+): Promise<WeeklyPostData | null> {
+  const row = await db
+    .prepare(
+      "SELECT data, final, computed_at FROM weekly_post_cache WHERE week_start = ?",
+    )
+    .bind(monday)
+    .first<WeeklyPostCacheRow>();
+  if (!row) return null;
+  if (!row.final && row.computed_at.slice(0, 10) !== fmtISODate(todayUTC())) {
+    return null;
+  }
+  try {
+    return JSON.parse(row.data) as WeeklyPostData;
+  } catch {
+    return null;
+  }
+}
+
+async function writeWeeklyPostCache(
+  db: D1Database,
+  data: WeeklyPostData,
+): Promise<void> {
+  // Final once we're at least a full day past the week's Sunday, so Sunday's
+  // sweep has had time to complete before the numbers are frozen.
+  const settledOn = fmtISODate(addDays(parseISODate(data.monday), 8));
+  const final = !data.inProgress && fmtISODate(todayUTC()) >= settledOn ? 1 : 0;
+  await db
+    .prepare(
+      `INSERT INTO weekly_post_cache (week_start, data, final, computed_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(week_start) DO UPDATE SET
+         data = excluded.data,
+         final = excluded.final,
+         computed_at = excluded.computed_at`,
+    )
+    .bind(data.monday, JSON.stringify(data), final, new Date().toISOString())
+    .run();
+}
+
 export async function loadWeeklyPostData(
   db: D1Database,
   monday: string,
 ): Promise<WeeklyPostData | null> {
   if (!isValidWeekStart(monday)) return null;
+
+  const cached = await readWeeklyPostCache(db, monday);
+  if (cached) return cached;
+
+  const data = await computeWeeklyPostData(db, monday);
+  if (data) await writeWeeklyPostCache(db, data);
+  return data;
+}
+
+async function computeWeeklyPostData(
+  db: D1Database,
+  monday: string,
+): Promise<WeeklyPostData | null> {
   const sundayDate = fmtISODate(addDays(parseISODate(monday), 6));
   const inProgress = isCurrentWeek(monday);
 

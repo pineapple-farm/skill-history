@@ -28,6 +28,7 @@ Or use the link generator at [skill-history.com](https://skill-history.com).
 
 - **Cloudflare Workers + Hono** — serves the site, chart SVGs, and scheduled sweeps
 - **Cloudflare D1 (SQLite)** — stores skills and daily snapshots
+- **Edge cache** — GET responses are stored in Cloudflare's cache via the Cache API (`caches.default`), so D1 only sees cache misses; weekly blog data is materialised in D1 once per week
 - **d3-shape** — smooth monotone curves (same algorithm as star-history)
 - **Data source** — ClawHub public API, sweeps every 2 hours
 

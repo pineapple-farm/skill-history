@@ -45,6 +45,12 @@ check "robots.txt returns 200" "$([ "$status" = "200" ] && echo true)"
 status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/sitemap.xml")
 check "sitemap.xml returns 200" "$([ "$status" = "200" ] && echo true)"
 
+# Edge cache: a second fetch of the same URL should be served from the Cache
+# API without touching D1 (the middleware stamps X-Cache on stored responses).
+curl -s -o /dev/null "$BASE/faq" >/dev/null
+xcache=$(curl -s -D - -o /dev/null "$BASE/chart/gavinlinasd/self-preserve.svg" >/dev/null; curl -s -D - -o /dev/null "$BASE/chart/gavinlinasd/self-preserve.svg" | tr -d '\r' | grep -i '^x-cache:' | awk '{print tolower($2)}')
+check "Edge cache serves repeat chart request" "$([ "$xcache" = "hit" ] && echo true)"
+
 body=$(curl -s "$BASE/llms.txt")
 check "llms.txt mentions MCP" "$(echo "$body" | grep -q 'MCP' && echo true)"
 

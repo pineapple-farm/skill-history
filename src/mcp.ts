@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { searchSkills } from "./search";
 
 /**
  * Canonical list of MCP tools this server exposes. Single source of truth —
@@ -134,7 +135,7 @@ export function createMcpHandler(db: D1Database) {
           handle: z.string().describe("Skill author handle"),
           slug: z.string().describe("Skill slug"),
           display_name: z.string().nullable().describe("Human-readable skill name"),
-          source: z.string().describe("Registry source (clawhub or skillssh)"),
+          source: z.string().describe("Registry source (clawhub)"),
           downloads: z.number().nullable().describe("Latest download count"),
         })).describe("Matching skills sorted by downloads descending"),
       },
@@ -158,25 +159,14 @@ export function createMcpHandler(db: D1Database) {
         };
       }
 
-      const pattern = `%${query}%`;
-      const { results } = await db
-        .prepare(
-          `SELECT s.handle, s.slug, s.display_name, s.source,
-                (SELECT sn.downloads FROM snapshots sn WHERE sn.skill_id = s.id ORDER BY sn.captured_at DESC LIMIT 1) as downloads
-         FROM skills s
-         WHERE s.handle LIKE ? OR s.slug LIKE ? OR s.display_name LIKE ?
-         ORDER BY downloads DESC
-         LIMIT ?`,
-        )
-        .bind(pattern, pattern, pattern, safeLimit)
-        .all();
+      const results = await searchSkills(db, query, safeLimit);
 
       return {
-        structuredContent: { query, results: results ?? [] },
+        structuredContent: { query, results },
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ query, results: results ?? [] }),
+            text: JSON.stringify({ query, results }),
           },
         ],
       };
